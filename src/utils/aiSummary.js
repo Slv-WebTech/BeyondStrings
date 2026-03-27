@@ -24,7 +24,7 @@ export async function summarizeMessagesWithAI(messages) {
                 Authorization: `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'gpt-4.1-mini',
+                model: 'gpt-4o-mini',
                 temperature: 0.2,
                 messages: [
                     {
