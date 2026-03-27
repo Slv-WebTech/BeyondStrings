@@ -9,7 +9,6 @@ import ReplayControls from './components/ReplayControls';
 import SettingsPanel from './components/SettingsPanel';
 import { Button } from './components/ui/button';
 import { Card, CardContent } from './components/ui/card';
-import { Skeleton } from './components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './components/ui/sheet';
 import { summarizeMessagesWithAI } from './utils/aiSummary';
 import { groupMessages } from './utils/groupMessages';
@@ -383,6 +382,7 @@ function App() {
     const [summary, setSummary] = useState('');
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
+    const [parseProgress, setParseProgress] = useState(0);
     const [visibleMessages, setVisibleMessages] = useState([]);
     const [isPlaying, setIsPlaying] = useState(false);
     const [speed, setSpeed] = useState(500);
@@ -701,8 +701,35 @@ function App() {
         setUsers(parsed.users);
         setFileName(loadedFileName);
         setSummary('');
+        setParseProgress(100);
         setError('');
     };
+
+    const handleParseStart = useCallback((loadedFileName) => {
+        setMessages([]);
+        setUsers([]);
+        setReplayMode(false);
+        setIsPlaying(false);
+        setIsTyping(false);
+        setReplayIndex(0);
+        setReplayStartIndex(0);
+        setVisibleMessages([]);
+        setFileName(loadedFileName || '');
+        setParseProgress(0);
+        setSummary('');
+        setError('');
+    }, []);
+
+    const handleParseChunk = useCallback((chunk) => {
+        if (!chunk?.messages?.length) {
+            return;
+        }
+
+        setMessages((prev) => [...prev, ...chunk.messages]);
+        if (chunk.users?.length) {
+            setUsers((prev) => Array.from(new Set([...prev, ...chunk.users])).sort());
+        }
+    }, []);
 
     const startReplay = (startIndex = 0) => {
         if (!groupedMessages.length) {
@@ -1014,13 +1041,29 @@ function App() {
                                 }}
                             />
                             <div className="relative z-10 mx-auto w-full md:max-w-4xl">
-                                {isParsing ? (
-                                    <div className="space-y-3 px-1 py-2">
-                                        {Array.from({ length: 6 }).map((_, index) => (
-                                            <div key={`skeleton-${index}`} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                                                <Skeleton className="h-20 w-[75%] rounded-[1.5rem]" />
+                                {groupedMessages.length === 0 && isParsing ? (
+                                    <div className="flex h-full min-h-[42vh] items-center justify-center px-4 text-center">
+                                        <motion.div
+                                            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="glass-panel max-w-xl rounded-[1.4rem] p-6"
+                                        >
+                                            <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 text-[var(--accent)]">
+                                                <MessageCircleMore size={30} />
+                                            </span>
+                                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                                                Parsing In Background
+                                            </p>
+                                            <h2 className="mt-2 text-xl font-bold text-[var(--text-main)]">
+                                                Import running smoothly. You can keep using settings while messages load.
+                                            </h2>
+                                            <p className="mt-2 text-sm leading-5 text-[var(--text-muted)]">
+                                                Progress: {parseProgress}%
+                                            </p>
+                                            <div className="mx-auto mt-3 h-2 w-full max-w-xs overflow-hidden rounded-full bg-[var(--panel-soft)]">
+                                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400/80 to-cyan-400/80" style={{ width: `${parseProgress}%` }} />
                                             </div>
-                                        ))}
+                                        </motion.div>
                                     </div>
                                 ) : groupedMessages.length === 0 ? (
                                     <div className="flex h-full min-h-[42vh] items-center justify-center px-4 text-center">
@@ -1045,6 +1088,17 @@ function App() {
                                     </div>
                                 ) : (
                                     <AnimatePresence initial={false} mode="popLayout">
+                                        {isParsing ? (
+                                            <motion.div
+                                                layout={!shouldReduceMotion}
+                                                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="sticky top-2 z-20 mx-auto mb-3 w-fit rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 backdrop-blur"
+                                            >
+                                                Parsing {parseProgress}% • {groupedMessages.length} messages loaded
+                                            </motion.div>
+                                        ) : null}
+
                                         {displayedMessages.map((message, index) => {
                                             const isCurrentUser = currentUser && message.sender === currentUser;
                                             const isMatch = highlightedIds.includes(message.id);
@@ -1147,6 +1201,9 @@ function App() {
                             {settingsSection === 'import' ? (
                                 <FileUpload
                                     onParsed={handleParsed}
+                                    onParseChunk={handleParseChunk}
+                                    onParseProgress={setParseProgress}
+                                    onParseStart={handleParseStart}
                                     onError={setError}
                                     fileName={fileName}
                                     isParsing={isParsing}

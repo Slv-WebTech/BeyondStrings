@@ -1,10 +1,10 @@
-import { parseWhatsAppFile } from '../utils/parser';
+import { parseWhatsAppFileInChunks } from '../utils/parser';
 import { motion } from 'framer-motion';
 import { UploadCloud } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { FilePicker } from './ui/file-picker';
 
-function FileUpload({ onParsed, onError, fileName, isParsing, onParsingChange }) {
+function FileUpload({ onParsed, onParseChunk, onParseProgress, onParseStart, onError, fileName, isParsing, onParsingChange }) {
     const handleFileSelect = async (file) => {
         if (!file) {
             return;
@@ -17,8 +17,13 @@ function FileUpload({ onParsed, onError, fileName, isParsing, onParsingChange })
         }
 
         try {
+            onParseStart?.(file.name);
             onParsingChange?.(true);
-            const result = await parseWhatsAppFile(file);
+            const result = await parseWhatsAppFileInChunks(file, {
+                chunkSize: 1200,
+                onChunk: onParseChunk,
+                onProgress: ({ percent }) => onParseProgress?.(percent)
+            });
             onParsed(result, file.name);
         } catch (error) {
             onError('Could not parse this file. Please check the export format.');
