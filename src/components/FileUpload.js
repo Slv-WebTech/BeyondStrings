@@ -20,7 +20,7 @@ function FileUpload({ onParsed, onParseChunk, onParseProgress, onParseStart, onE
             onParseStart?.(file.name);
             onParsingChange?.(true);
             const result = await parseWhatsAppFileInChunks(file, {
-                chunkSize: 1200,
+                chunkSize: 2200,
                 onChunk: onParseChunk,
                 onProgress: ({ percent }) => onParseProgress?.(percent)
             });

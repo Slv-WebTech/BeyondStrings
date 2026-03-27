@@ -362,6 +362,7 @@ function formatLastSeenLabel(value) {
 }
 
 function App() {
+    const PARSE_RENDER_WINDOW = 280;
     const [chatMode, setChatMode] = useState(() => {
         const saved = localStorage.getItem('whatsapp-chat-mode');
         return saved === 'romantic' ? 'romantic' : 'formal';
@@ -403,6 +404,9 @@ function App() {
     const chatCaptureRef = useRef(null);
     const messageRefs = useRef({});
     const replayTimerRef = useRef(null);
+    const parseFlushTimerRef = useRef(null);
+    const pendingChunkMessagesRef = useRef([]);
+    const pendingChunkUsersRef = useRef(new Set());
     const bottomAnchorRef = useRef(null);
     const defaultLoadedRef = useRef(false);
     const touchStartRef = useRef(null);
@@ -413,6 +417,13 @@ function App() {
         [groupedMessages, replayStartIndex]
     );
     const displayedMessages = replayMode ? visibleMessages : groupedMessages;
+    const renderMessages = useMemo(() => {
+        if (!isParsing || replayMode) {
+            return displayedMessages;
+        }
+
+        return displayedMessages.slice(-PARSE_RENDER_WINDOW);
+    }, [displayedMessages, isParsing, replayMode]);
     const replayDateMarkers = useMemo(
         () =>
             groupedMessages
@@ -539,6 +550,14 @@ function App() {
 
         bottomAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'end' });
     }, [visibleMessages, isTyping, replayMode, shouldReduceMotion]);
+
+    useEffect(() => {
+        return () => {
+            if (parseFlushTimerRef.current) {
+                window.clearTimeout(parseFlushTimerRef.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!isPlaying || !replayMode) {
@@ -697,6 +716,12 @@ function App() {
     };
 
     const handleParsed = (parsed, loadedFileName) => {
+        if (parseFlushTimerRef.current) {
+            window.clearTimeout(parseFlushTimerRef.current);
+            parseFlushTimerRef.current = null;
+        }
+        pendingChunkMessagesRef.current = [];
+        pendingChunkUsersRef.current = new Set();
         setMessages(parsed.messages);
         setUsers(parsed.users);
         setFileName(loadedFileName);
@@ -706,6 +731,12 @@ function App() {
     };
 
     const handleParseStart = useCallback((loadedFileName) => {
+        if (parseFlushTimerRef.current) {
+            window.clearTimeout(parseFlushTimerRef.current);
+            parseFlushTimerRef.current = null;
+        }
+        pendingChunkMessagesRef.current = [];
+        pendingChunkUsersRef.current = new Set();
         setMessages([]);
         setUsers([]);
         setReplayMode(false);
@@ -720,16 +751,38 @@ function App() {
         setError('');
     }, []);
 
+    const flushPendingParseChunks = useCallback(() => {
+        parseFlushTimerRef.current = null;
+
+        const nextMessages = pendingChunkMessagesRef.current;
+        const nextUsers = Array.from(pendingChunkUsersRef.current);
+
+        pendingChunkMessagesRef.current = [];
+        pendingChunkUsersRef.current = new Set();
+
+        if (nextMessages.length) {
+            setMessages((prev) => [...prev, ...nextMessages]);
+        }
+
+        if (nextUsers.length) {
+            setUsers((prev) => Array.from(new Set([...prev, ...nextUsers])).sort());
+        }
+    }, []);
+
     const handleParseChunk = useCallback((chunk) => {
         if (!chunk?.messages?.length) {
             return;
         }
 
-        setMessages((prev) => [...prev, ...chunk.messages]);
+        pendingChunkMessagesRef.current.push(...chunk.messages);
         if (chunk.users?.length) {
-            setUsers((prev) => Array.from(new Set([...prev, ...chunk.users])).sort());
+            chunk.users.forEach((user) => pendingChunkUsersRef.current.add(user));
         }
-    }, []);
+
+        if (!parseFlushTimerRef.current) {
+            parseFlushTimerRef.current = window.setTimeout(flushPendingParseChunks, 110);
+        }
+    }, [flushPendingParseChunks]);
 
     const startReplay = (startIndex = 0) => {
         if (!groupedMessages.length) {
@@ -1087,7 +1140,7 @@ function App() {
                                         </motion.div>
                                     </div>
                                 ) : (
-                                    <AnimatePresence initial={false} mode="popLayout">
+                                    <>
                                         {isParsing ? (
                                             <motion.div
                                                 layout={!shouldReduceMotion}
@@ -1099,21 +1152,59 @@ function App() {
                                             </motion.div>
                                         ) : null}
 
-                                        {displayedMessages.map((message, index) => {
+                                        {isParsing ? renderMessages.map((message, index) => {
+                                            const isCurrentUser = currentUser && message.sender === currentUser;
+                                            const showDateChip = shouldRenderDateChip(renderMessages, index);
+                                            const sourceIndex = groupedMessages.findIndex((item) => item.id === message.id);
+
+                                            return (
+                                                <div key={`${message.id}-wrapper`}>
+                                                    {showDateChip ? (
+                                                        <div className="my-2.5 flex justify-center">
+                                                            <span className="rounded-full border border-[var(--border-soft)] bg-[var(--date-chip)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] shadow-sm">
+                                                                {message.date}
+                                                            </span>
+                                                        </div>
+                                                    ) : null}
+
+                                                    <ChatBubble
+                                                        message={message}
+                                                        isCurrentUser={isCurrentUser}
+                                                        avatar={avatars[message.sender] || defaultAvatarMap[message.sender]}
+                                                        query={search}
+                                                        isMatch={false}
+                                                        animateEntry={false}
+                                                        onReplayFrom={() => {
+                                                            const nextIndex = Math.max(sourceIndex, 0);
+                                                            setReplaySegment('from-here');
+                                                            setScrubValue(nextIndex);
+                                                            startReplay(nextIndex);
+                                                        }}
+                                                        messageRef={(node) => {
+                                                            if (node) {
+                                                                messageRefs.current[message.id] = node;
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            );
+                                        }) : (
+                                            <AnimatePresence initial={false} mode="popLayout">
+                                                {displayedMessages.map((message, index) => {
                                             const isCurrentUser = currentUser && message.sender === currentUser;
                                             const isMatch = highlightedIds.includes(message.id);
                                             const showDateChip = shouldRenderDateChip(displayedMessages, index);
 
                                             const sourceIndex = groupedMessages.findIndex((item) => item.id === message.id);
 
-                                            return (
-                                                <motion.div
-                                                    layout={!shouldReduceMotion}
-                                                    key={`${message.id}-wrapper`}
-                                                    initial={replayMode && !shouldReduceMotion ? { opacity: 0, y: 10 } : false}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
-                                                >
+                                                    return (
+                                                        <motion.div
+                                                            layout={!shouldReduceMotion}
+                                                            key={`${message.id}-wrapper`}
+                                                            initial={replayMode && !shouldReduceMotion ? { opacity: 0, y: 10 } : false}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
+                                                        >
                                                     {showDateChip ? (
                                                         <motion.div layout={!shouldReduceMotion} className="my-2.5 flex justify-center">
                                                             <span className="rounded-full border border-[var(--border-soft)] bg-[var(--date-chip)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] shadow-sm">
@@ -1141,10 +1232,20 @@ function App() {
                                                             }
                                                         }}
                                                     />
-                                                </motion.div>
-                                            );
-                                        })}
-                                    </AnimatePresence>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </AnimatePresence>
+                                        )}
+
+                                        {isParsing && groupedMessages.length > PARSE_RENDER_WINDOW ? (
+                                            <div className="my-2 flex justify-center">
+                                                <span className="rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] shadow-sm">
+                                                    Showing latest {PARSE_RENDER_WINDOW} while parsing for smoother UI
+                                                </span>
+                                            </div>
+                                        ) : null}
+                                    </>
                                 )}
                             </div>
 
