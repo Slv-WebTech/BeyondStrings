@@ -398,6 +398,7 @@ function App() {
     const [showSearch, setShowSearch] = useState(false);
     const [showTimeline, setShowTimeline] = useState(false);
     const shouldReduceMotion = useReducedMotion();
+    const hasOpenAIKey = Boolean(import.meta.env.VITE_OPENAI_API_KEY?.trim());
 
     const chatCaptureRef = useRef(null);
     const messageRefs = useRef({});
@@ -1167,6 +1168,12 @@ function App() {
                                                 {summaryLoading ? 'Summarizing…' : 'Generate'}
                                             </Button>
                                         </div>
+
+                                        {!hasOpenAIKey ? (
+                                            <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-200/90">
+                                                OpenAI API key is not configured. Summary will use local analysis mode.
+                                            </p>
+                                        ) : null}
 
                                         {summary ? (
                                             <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--text-main)]/85">{summary}</pre>
