@@ -1171,7 +1171,7 @@ function App() {
 
                                         {!hasOpenAIKey ? (
                                             <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-200/90">
-                                                OpenAI API key is not configured. Summary will use local analysis mode.
+                                                OpenAI API key is not configured. Summary will try local Ollama first, then built-in local analysis.
                                             </p>
                                         ) : null}
 
