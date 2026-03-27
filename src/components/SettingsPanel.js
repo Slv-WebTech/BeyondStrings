@@ -1,0 +1,228 @@
+import { Heart, ImagePlus, Laptop, MoonStar, Sparkles, SunMedium, UserCircle2 } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
+import { FilePicker } from './ui/file-picker';
+
+function SettingsPanel({
+    section = 'appearance',
+    theme,
+    themePreference,
+    onThemeChange,
+    chatMode,
+    onChatModeChange,
+    users,
+    currentUser,
+    onCurrentUserChange,
+    onAvatarUpload,
+    onBackgroundUpload,
+    selectedBackground,
+    backgroundOptions = [],
+    onBackgroundPresetSelect,
+    onExport
+}) {
+    const isAppearance = section === 'appearance';
+    const isParticipants = section === 'participants';
+    const isExport = section === 'export';
+    // Filter by both chatMode and theme mode (light/dark)
+    const modeFilteredBackgrounds = backgroundOptions.filter(
+        (item) => !item.chatMode || item.chatMode === chatMode
+    );
+    const lightBackgroundOptions = modeFilteredBackgrounds.filter((item) => item.mode === 'light');
+    const darkBackgroundOptions = modeFilteredBackgrounds.filter((item) => item.mode === 'dark');
+
+    const renderBackgroundPresetGroup = (title, options) => {
+        if (!options.length) {
+            return null;
+        }
+
+        return (
+            <div className="mt-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{title}</p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                    {options.map((option) => (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onBackgroundPresetSelect?.(option.url)}
+                            className={`overflow-hidden rounded-lg border text-left transition ${selectedBackground === option.url
+                                ? 'border-emerald-400/60 ring-1 ring-emerald-400/40'
+                                : 'border-[var(--border-soft)] hover:border-emerald-400/40'
+                                }`}
+                            title={option.label}
+                        >
+                            <div
+                                className="h-10 w-full bg-cover bg-center"
+                                style={{ backgroundImage: `url(${option.url})` }}
+                            />
+                            <div className="truncate px-1.5 py-1 text-[10px] font-medium text-[var(--text-main)]">{option.label}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-3">
+            {isAppearance ? (
+                <Card className="ambient-ring premium-panel overflow-hidden">
+                    <CardContent className="p-4">
+                        <h2 className="inline-flex items-center gap-2 text-[1.05rem] font-semibold tracking-[-0.02em] text-[var(--text-main)]">
+                            <Sparkles size={18} />
+                            Appearance
+                        </h2>
+
+                        <div className="mt-3 flex rounded-full p-1 surface-soft">
+                            <button
+                                type="button"
+                                onClick={() => onThemeChange('light')}
+                                className={`theme-pill ${themePreference === 'light' ? 'theme-pill-active' : ''}`}
+                            >
+                                <SunMedium size={14} />
+                                Light
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onThemeChange('dark')}
+                                className={`theme-pill ${themePreference === 'dark' ? 'theme-pill-active' : ''}`}
+                            >
+                                <MoonStar size={14} />
+                                Dark
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onThemeChange('system')}
+                                className={`theme-pill ${themePreference === 'system' ? 'theme-pill-active' : ''}`}
+                            >
+                                <Laptop size={14} />
+                                Auto
+                            </button>
+                        </div>
+                        <p className="mt-2 text-xs text-[var(--text-muted)]">
+                            Auto follows your device color scheme.
+                        </p>
+
+                        <div className="mt-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Chat Mode</p>
+                            <div className="mt-2 flex rounded-full p-1 surface-soft">
+                                <button
+                                    type="button"
+                                    onClick={() => onChatModeChange?.('formal')}
+                                    className={`theme-pill ${chatMode === 'formal' ? 'theme-pill-active' : ''}`}
+                                >
+                                    <Sparkles size={14} />
+                                    Formal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onChatModeChange?.('romantic')}
+                                    className={`theme-pill ${chatMode === 'romantic' ? 'theme-pill-active' : ''}`}
+                                >
+                                    <Heart size={14} />
+                                    Romantic
+                                </button>
+                            </div>
+                            <p className="mt-2 text-xs text-[var(--text-muted)]">
+                                Formal uses neutral tones. Romantic applies softer love-focused styling.
+                            </p>
+                        </div>
+
+                        <label className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-main)]">
+                            <ImagePlus size={15} />
+                            Chat Background Image
+                        </label>
+                        <FilePicker
+                            className="mt-1"
+                            accept="image/*"
+                            buttonLabel="Upload"
+                            placeholder="Choose background image"
+                            onFileSelect={onBackgroundUpload}
+                        />
+
+                        <div className="mt-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Background Presets</p>
+                            <button
+                                type="button"
+                                onClick={() => onBackgroundPresetSelect?.('')}
+                                className={`mt-2 w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${!selectedBackground
+                                    ? 'border-emerald-400/60 bg-emerald-500/10 text-[var(--text-main)]'
+                                    : 'border-[var(--border-soft)] bg-[var(--panel-soft)] text-[var(--text-muted)] hover:border-emerald-400/40'
+                                    }`}
+                            >
+                                Theme Default
+                            </button>
+
+                            {theme === 'light' ? renderBackgroundPresetGroup('Light Presets', lightBackgroundOptions) : renderBackgroundPresetGroup('Dark Presets', darkBackgroundOptions)}
+                            {theme === 'light' ? renderBackgroundPresetGroup('Dark Presets', darkBackgroundOptions) : renderBackgroundPresetGroup('Light Presets', lightBackgroundOptions)}
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : null}
+
+            {isParticipants ? (
+                <Card className="ambient-ring premium-panel overflow-hidden">
+                    <CardContent className="p-4">
+                        <h3 className="inline-flex items-center gap-2 text-base font-semibold tracking-[-0.02em] text-[var(--text-main)]">
+                            <UserCircle2 size={17} />
+                            Participants
+                        </h3>
+
+                        <label className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-main)]">
+                            <UserCircle2 size={15} />
+                            Current User
+                        </label>
+                        <div className="mt-1">
+                            <Select value={currentUser || '__none__'} onValueChange={(value) => onCurrentUserChange(value === '__none__' ? '' : value)}>
+                                <SelectTrigger>
+                                    {currentUser || 'Select user'}
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none__">Select user</SelectItem>
+                                    {users.map((user) => (
+                                        <SelectItem key={user} value={user}>
+                                            {user}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <p className="mt-3 text-xs text-[var(--text-muted)]">Upload a profile image per sender.</p>
+                        <div className="mt-2.5 space-y-2.5">
+                            {users.map((user) => (
+                                <label key={user} className="block rounded-[1rem] border border-[var(--border-soft)] bg-[var(--panel-soft)] p-2.5 text-sm">
+                                    <span className="mb-2 block font-medium text-[var(--text-main)]">{user}</span>
+                                    <FilePicker
+                                        accept="image/*"
+                                        buttonLabel="Avatar"
+                                        placeholder={`Upload avatar for ${user}`}
+                                        onFileSelect={(file) => onAvatarUpload(user, file)}
+                                        className="mt-1"
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : null}
+
+            {isExport ? (
+                <Card className="ambient-ring premium-panel overflow-hidden">
+                    <CardContent className="p-4">
+                        <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--text-main)]">Export</h3>
+                        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                            Capture the full rendered chat as a PNG image, including current theme, wallpaper, and message styling.
+                        </p>
+
+                        <Button type="button" variant="secondary" onClick={onExport} className="mt-3 w-full">
+                            Export Chat as PNG
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : null}
+        </div>
+    );
+}
+
+export default SettingsPanel;
