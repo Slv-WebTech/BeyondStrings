@@ -27,6 +27,18 @@ const MAX_MESSAGE_LENGTH = 10000; // Truncate extremely long messages
 const MAX_PENDING_MESSAGE_LENGTH = 50000; // Total pending message size
 const MAX_SENDER_LENGTH = 200; // Sender name length
 const MAX_MESSAGES_PER_FILE = 100000; // Prevent unbounded parsing
+const DEFAULT_PARSE_CHUNK_SIZE = 1200;
+
+function yieldToMainThread() {
+    return new Promise((resolve) => {
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => resolve());
+            return;
+        }
+
+        setTimeout(resolve, 0);
+    });
+}
 
 function normalizeLineEndings(text) {
     if (!text || typeof text !== 'string') {
@@ -37,13 +49,13 @@ function normalizeLineEndings(text) {
 
 function finalizePendingMessage(pending, messages, usersSet, parseStats) {
     if (!pending) {
-        return;
+        return null;
     }
 
     // Safety checks
     if (messages.length >= MAX_MESSAGES_PER_FILE) {
         parseStats.skipped++;
-        return;
+        return null;
     }
 
     try {
@@ -51,14 +63,14 @@ function finalizePendingMessage(pending, messages, usersSet, parseStats) {
         const dateParts = safeParseDateParts(pending.date);
         if (!dateParts) {
             parseStats.invalidDates++;
-            return;
+            return null;
         }
 
         // Validate time
         const timeParts = safeParseTime(pending.time);
         if (!timeParts) {
             parseStats.invalidTimes++;
-            return;
+            return null;
         }
 
         // Sanitize message text
@@ -72,7 +84,7 @@ function finalizePendingMessage(pending, messages, usersSet, parseStats) {
         let sender = pending.sender ? getSafeSenderName(pending.sender) : null;
         if (!pending.isSystem && !sender) {
             parseStats.missingSenders++;
-            return; // Skip messages without sender name
+            return null; // Skip messages without sender name
         }
 
         const formattedMessage = {
@@ -88,10 +100,193 @@ function finalizePendingMessage(pending, messages, usersSet, parseStats) {
         if (formattedMessage.sender && !pending.isSystem) {
             usersSet.add(formattedMessage.sender);
         }
+        return formattedMessage;
     } catch (error) {
         console.warn('Error finalizing message:', error);
         parseStats.errors++;
+        return null;
     }
+}
+
+function createParseStats(totalLines) {
+    return {
+        total: totalLines,
+        parsed: 0,
+        skipped: 0,
+        invalidDates: 0,
+        invalidTimes: 0,
+        truncated: 0,
+        missingSenders: 0,
+        errors: 0
+    };
+}
+
+function processChatLine(line, state) {
+    const { messages, usersSet, parseStats } = state;
+
+    if (!line || typeof line !== 'string') {
+        parseStats.skipped++;
+        return null;
+    }
+
+    if (line.length > 50000) {
+        parseStats.skipped++;
+        return null;
+    }
+
+    const msgMatch = line.match(MESSAGE_REGEX);
+    if (msgMatch) {
+        const finalized = finalizePendingMessage(state.pending, messages, usersSet, parseStats);
+        state.pending = {
+            date: msgMatch[1],
+            time: msgMatch[2],
+            sender: msgMatch[3] ? msgMatch[3].trim() : null,
+            message: msgMatch[4] || '',
+            isSystem: false
+        };
+        parseStats.parsed++;
+        return finalized;
+    }
+
+    const bracketedMsgMatch = line.match(BRACKETED_MESSAGE_REGEX);
+    if (bracketedMsgMatch) {
+        const finalized = finalizePendingMessage(state.pending, messages, usersSet, parseStats);
+        state.pending = {
+            date: bracketedMsgMatch[1],
+            time: bracketedMsgMatch[2],
+            sender: bracketedMsgMatch[3] ? bracketedMsgMatch[3].trim() : null,
+            message: bracketedMsgMatch[4] || '',
+            isSystem: false
+        };
+        parseStats.parsed++;
+        return finalized;
+    }
+
+    const sysMatch = line.match(SYSTEM_REGEX);
+    if (sysMatch) {
+        const maybeMessage = sysMatch[3] || '';
+        if (maybeMessage.includes(':')) {
+            if (state.pending && state.pending.message.length < MAX_PENDING_MESSAGE_LENGTH) {
+                state.pending.message += `\n${line}`;
+            }
+            return null;
+        }
+
+        const finalized = finalizePendingMessage(state.pending, messages, usersSet, parseStats);
+        state.pending = {
+            date: sysMatch[1],
+            time: sysMatch[2],
+            sender: null,
+            message: maybeMessage,
+            isSystem: true
+        };
+        parseStats.parsed++;
+        return finalized;
+    }
+
+    const bracketedSysMatch = line.match(BRACKETED_SYSTEM_REGEX);
+    if (bracketedSysMatch) {
+        const maybeMessage = bracketedSysMatch[3] || '';
+        if (maybeMessage.includes(':')) {
+            if (state.pending && state.pending.message.length < MAX_PENDING_MESSAGE_LENGTH) {
+                state.pending.message += `\n${line}`;
+            }
+            return null;
+        }
+
+        const finalized = finalizePendingMessage(state.pending, messages, usersSet, parseStats);
+        state.pending = {
+            date: bracketedSysMatch[1],
+            time: bracketedSysMatch[2],
+            sender: null,
+            message: maybeMessage,
+            isSystem: true
+        };
+        parseStats.parsed++;
+        return finalized;
+    }
+
+    if (state.pending && state.pending.message.length < MAX_PENDING_MESSAGE_LENGTH) {
+        state.pending.message += `\n${line}`;
+    } else if (state.pending) {
+        parseStats.truncated++;
+    }
+
+    return null;
+}
+
+async function parseWhatsAppTextInChunks(rawText, options = {}) {
+    const text = normalizeLineEndings(rawText || '');
+    const lines = text.split('\n');
+    const messages = [];
+    const usersSet = new Set();
+    const parseStats = createParseStats(lines.length);
+    const chunkSize = clampNumber(options.chunkSize ?? DEFAULT_PARSE_CHUNK_SIZE, 200, 5000);
+    const onChunk = typeof options.onChunk === 'function' ? options.onChunk : null;
+    const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+
+    const state = {
+        pending: null,
+        messages,
+        usersSet,
+        parseStats
+    };
+
+    let stagedMessages = [];
+    let stagedUsers = new Set();
+
+    const flushStage = (processedLines) => {
+        if (stagedMessages.length && onChunk) {
+            onChunk({
+                messages: stagedMessages,
+                users: Array.from(stagedUsers)
+            });
+        }
+
+        if (onProgress) {
+            const percent = lines.length ? Math.min(100, Math.round((processedLines / lines.length) * 100)) : 100;
+            onProgress({ processedLines, totalLines: lines.length, percent });
+        }
+
+        stagedMessages = [];
+        stagedUsers = new Set();
+    };
+
+    for (let index = 0; index < lines.length; index++) {
+        const finalized = processChatLine(lines[index], state);
+
+        if (finalized) {
+            stagedMessages.push(finalized);
+            if (finalized.sender && !finalized.isSystem) {
+                stagedUsers.add(finalized.sender);
+            }
+        }
+
+        if ((index + 1) % chunkSize === 0) {
+            flushStage(index + 1);
+            await yieldToMainThread();
+        }
+    }
+
+    const finalizedTail = finalizePendingMessage(state.pending, messages, usersSet, parseStats);
+    if (finalizedTail) {
+        stagedMessages.push(finalizedTail);
+        if (finalizedTail.sender && !finalizedTail.isSystem) {
+            stagedUsers.add(finalizedTail.sender);
+        }
+    }
+
+    flushStage(lines.length);
+
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Parse statistics:', parseStats);
+    }
+
+    return {
+        messages,
+        users: Array.from(usersSet).sort(),
+        stats: parseStats
+    };
 }
 
 function decodeBuffer(buffer) {
@@ -236,6 +431,43 @@ export function parseWhatsAppChat(rawText) {
         users: Array.from(usersSet).sort(),
         stats: parseStats
     };
+}
+
+export async function parseWhatsAppFileInChunks(file, options = {}) {
+    if (!file || !(file instanceof File || file instanceof Blob)) {
+        return Promise.reject(new Error('Invalid file object provided'));
+    }
+
+    const maxFileSize = 50 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+        return Promise.reject(new Error(`File size exceeds maximum limit of ${maxFileSize / 1024 / 1024}MB`));
+    }
+
+    const extension = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
+    const buffer = await file.arrayBuffer();
+    let content = '';
+
+    if (extension === 'doc' || extension === 'docx') {
+        content = decodeBuffer(new Uint8Array(buffer));
+    } else {
+        content = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+    }
+
+    const sanitized = String(content || '')
+        .replace(/\u0000/g, '')
+        .slice(0, 5000000);
+
+    if (!sanitized.trim()) {
+        return Promise.reject(new Error('File is empty or contains no readable text'));
+    }
+
+    const parsed = await parseWhatsAppTextInChunks(sanitized, options);
+
+    if (!parsed.messages || parsed.messages.length === 0) {
+        return Promise.reject(new Error('No valid messages found in file. Check file format.'));
+    }
+
+    return parsed;
 }
 
 /**
