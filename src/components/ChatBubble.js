@@ -130,9 +130,9 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                 animate={{ opacity: 1, y: 0 }}
                 className="my-2 flex justify-center px-2 text-center text-[11px] text-[var(--text-muted)] md:px-4"
             >
-                <span className="system-message-chip inline-flex max-w-[92%] items-center gap-1.5 rounded-full border border-[var(--border-soft)] bg-[var(--system-chip)] px-3 py-0.5 leading-5 shadow md:max-w-[80%]">
+                <span className="system-message-chip inline-flex w-fit max-w-[96%] items-start gap-1.5 rounded-2xl border border-[var(--border-soft)] bg-[var(--system-chip)] px-3.5 py-1 leading-5 shadow md:max-w-[86%]">
                     <Info size={12} className="system-message-chip__icon" />
-                    {message.message}
+                    <span className="system-message-chip__text">{message.message}</span>
                 </span>
             </motion.div>
         );
