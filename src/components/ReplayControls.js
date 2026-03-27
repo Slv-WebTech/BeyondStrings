@@ -96,6 +96,7 @@ function ReplayControls({
     const [isMobileView, setIsMobileView] = useState(() => isMobileViewport(window?.innerWidth));
     const timelineRef = useRef(null);
     const [timelineWidth, setTimelineWidth] = useState(0);
+    const safeSpeed = getValidSpeed(speed, 500);
 
     useEffect(() => {
         if (!isScrubbing) {
@@ -454,7 +455,7 @@ function ReplayControls({
                 </div>
 
                 <div className="timeline-shell" ref={timelineRef}>
-                    <div className="timeline-preview" style={{ left: `${previewPercent}%`, transform: previewTransform }}>
+                    <div className="timeline-preview" style={{ left: `${safePreviewPercent}%`, transform: previewTransform }}>
                         <span className="timeline-preview__label">{tooltipLabel}</span>
                         {scrubPreviewMessage && !isMobileView ? (
                             <span className="timeline-preview__meta">

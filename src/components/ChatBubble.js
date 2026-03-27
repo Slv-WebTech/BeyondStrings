@@ -1,6 +1,6 @@
 import { getHighlightParts } from '../utils/highlight';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { FileText, Mic, Phone, Play, Video } from 'lucide-react';
+import { FileText, Info, Mic, Phone, Play, Video } from 'lucide-react';
 import { clsx } from 'clsx';
 import { classifyMessage, getCallDetails, getMediaLabel, getResolvableMediaSource, getVoiceDuration } from '../utils/messageTypes';
 
@@ -130,7 +130,8 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                 animate={{ opacity: 1, y: 0 }}
                 className="my-2 flex justify-center px-2 text-center text-[11px] text-[var(--text-muted)] md:px-4"
             >
-                <span className="inline-block max-w-[92%] rounded-full border border-[var(--border-soft)] bg-[var(--system-chip)] px-3 py-0.5 leading-5 shadow md:max-w-[80%]">
+                <span className="system-message-chip inline-flex max-w-[92%] items-center gap-1.5 rounded-full border border-[var(--border-soft)] bg-[var(--system-chip)] px-3 py-0.5 leading-5 shadow md:max-w-[80%]">
+                    <Info size={12} className="system-message-chip__icon" />
                     {message.message}
                 </span>
             </motion.div>
