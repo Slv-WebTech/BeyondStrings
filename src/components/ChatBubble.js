@@ -1,12 +1,12 @@
 import { getHighlightParts } from '../utils/highlight';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { FileText, Info, Mic, Phone, Play, Video } from 'lucide-react';
+import { Check, CheckCheck, FileText, Info, Mic, Phone, Play, Video } from 'lucide-react';
 import { clsx } from 'clsx';
 import { classifyMessage, getCallDetails, getMediaLabel, getResolvableMediaSource, getVoiceDuration } from '../utils/messageTypes';
 
 function MessageHighlight({ message, query, reduceMotion }) {
     return (
-        <p className="overflow-hidden whitespace-pre-line break-words text-[13px] leading-[1.35rem]">
+        <p className="overflow-hidden whitespace-pre-line break-words text-sm leading-relaxed tracking-[-0.01em]">
             {getHighlightParts(message, query).map((part, index) => (
                 <motion.span
                     key={`${message}-${index}`}
@@ -118,9 +118,10 @@ function CallBubble({ message, reduceMotion }) {
     );
 }
 
-function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef, onReplayFrom, animateEntry }) {
+function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef, onReplayFrom, onAddReaction, animateEntry }) {
     const reduceMotion = useReducedMotion();
     const messageType = classifyMessage(message);
+    const reactionEntries = Object.entries(message.reactions || {}).filter(([, count]) => Number(count) > 0);
 
     if (message.isSystem) {
         return (
@@ -157,7 +158,15 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
             ? "before:content-[''] before:absolute before:top-0 before:-right-[6px] before:h-3.5 before:w-3.5 before:bg-[var(--bubble-tail-sent)] before:-skew-y-[35deg] before:rounded-bl-sm"
             : "before:content-[''] before:absolute before:top-0 before:-left-[6px] before:h-3.5 before:w-3.5 before:bg-[var(--bubble-tail-received)] before:skew-y-[35deg] before:rounded-br-sm"
         : '';
-    const spacingClass = message.isGrouped ? 'my-0.5' : 'my-1.5 md:my-2';
+    const spacingClass = message.isGrouped ? 'my-0.5' : 'my-2.5 md:my-3';
+    const statusIcon =
+        message.deliveryStatus === 'read' ? (
+            <CheckCheck size={12} className="text-emerald-700/70" />
+        ) : message.deliveryStatus === 'delivered' ? (
+            <CheckCheck size={12} className="text-emerald-900/45" />
+        ) : (
+            <Check size={12} className="text-emerald-900/45" />
+        );
 
     return (
         <motion.div
@@ -172,10 +181,10 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                 <img
                     src={avatar || 'https://i.pravatar.cc/100?img=6'}
                     alt={message.sender}
-                    className="mr-1.5 h-6 w-6 self-end rounded-full border border-white/80 object-cover shadow-sm ring-2 ring-white/70 dark:border-slate-700/70 dark:ring-slate-800/80 md:mr-2 md:h-8 md:w-8"
+                    className="mr-2 h-7 w-7 self-end rounded-full border border-white/80 object-cover shadow-sm ring-2 ring-white/70 dark:border-slate-700/70 dark:ring-slate-800/80 md:h-8 md:w-8"
                 />
             ) : (
-                !isCurrentUser && <div className="mr-1.5 w-6 md:mr-2 md:w-8" />
+                !isCurrentUser && <div className="mr-2 w-7 md:w-8" />
             )}
 
             <motion.button
@@ -183,14 +192,15 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                 whileTap={reduceMotion ? undefined : { scale: 0.985, y: 0 }}
                 type="button"
                 onClick={onReplayFrom}
+                onDoubleClick={() => onAddReaction?.(message, '👍')}
                 className={clsx(
-                    `premium-message-bubble relative max-w-[89%] border px-2.5 py-1.5 text-left shadow-sm transition-all duration-200 hover:shadow-md sm:max-w-[85%] md:max-w-[70%] md:px-3 md:py-2 ${bubbleColor} ${baseRadius} ${radiusClass} ${tailClass}`,
-                    isCurrentUser ? 'text-white' : 'text-[var(--text-main)]',
+                    `premium-message-bubble relative max-w-[90%] border px-3 py-2 text-left shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md sm:max-w-[82%] md:max-w-[68%] md:px-3.5 md:py-2.5 ${bubbleColor} ${baseRadius} ${radiusClass} ${tailClass}`,
+                    isCurrentUser ? 'text-slate-900' : 'text-[var(--text-main)]',
                     isMatch && 'ring-2 ring-yellow-300/80'
                 )}
             >
                 {!isCurrentUser && !message.isGrouped ? (
-                    <p className="mb-1 text-[11px] font-semibold text-[var(--accent)]">{message.sender}</p>
+                    <p className="mb-1 text-[11px] font-semibold tracking-[0.01em] text-[var(--accent)]">{message.sender}</p>
                 ) : null}
 
                 <AnimatePresence mode="wait">
@@ -201,12 +211,24 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
 
                 <span
                     className={clsx(
-                        'message-time-label mt-1 block text-right text-[11px] leading-none',
+                        'message-time-label mt-1.5 inline-flex w-full items-center justify-end gap-1 text-right text-[11px] leading-none',
                         isCurrentUser ? 'message-time-label--sent' : 'message-time-label--received'
                     )}
                 >
                     {message.time}
+                    {isCurrentUser ? statusIcon : null}
                 </span>
+
+                {reactionEntries.length ? (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        {reactionEntries.map(([emoji, count]) => (
+                            <span key={`${message.id}-${emoji}`} className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[11px] font-medium">
+                                <span>{emoji}</span>
+                                <span>{count}</span>
+                            </span>
+                        ))}
+                    </div>
+                ) : null}
             </motion.button>
         </motion.div>
     );

@@ -1,22 +1,55 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { signInAnonymously } from 'firebase/auth';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useDispatch, useSelector } from 'react-redux';
 import { Virtuoso } from 'react-virtuoso';
 import { toPng } from 'html-to-image';
-import { Download, MessageCircleMore, BarChart3 } from 'lucide-react';
+import { MessageCircleMore, X } from 'lucide-react';
 import ChatBubble from './components/ChatBubble';
 import ChatHeader from './components/ChatHeader';
 import ChatInsights from './components/ChatInsights';
 import FileUpload from './components/FileUpload';
+import LiveComposer from './components/LiveComposer';
 import ReplayControls from './components/ReplayControls';
+import SecretLogin from './components/SecretLogin';
 import SettingsPanel from './components/SettingsPanel';
 import { Button } from './components/ui/button';
 import { Card, CardContent } from './components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './components/ui/sheet';
+import {
+    addMessageReaction,
+    fetchOlderRoomMessages,
+    markMessageDelivered,
+    markMessageRead,
+    scrubLegacyRoomMetadata,
+    sanitizeRoomId,
+    sendRoomMessage,
+    setRoomUserPresence,
+    setTypingStatus,
+    subscribeRoomUsers,
+    subscribeToRoomMessages,
+    subscribeTypingStatus
+} from './firebase/chatService';
+import { auth, isFirebaseConfigured } from './firebase/config';
 import { summarizeMessagesWithAI } from './utils/aiSummary';
 import { groupMessages } from './utils/groupMessages';
 import { includesQuery } from './utils/highlight';
 import { parseWhatsAppChat } from './utils/parser';
+import { decryptMessage, encryptMessage } from './utils/encryption';
 import sampleChatText from './components/Assets/sample chat.txt?raw';
+import {
+    clearAuthSession,
+    selectAuthSession,
+    selectChatMode,
+    selectCurrentUser,
+    selectLastRoomId,
+    selectThemePreference,
+    setAuthSession,
+    setChatMode,
+    setCurrentUser,
+    setLastRoomId,
+    setThemePreference
+} from './store/appSessionSlice';
 
 const DEFAULT_CHAT_BACKGROUND = {
     formal: {
@@ -36,6 +69,7 @@ const DEFAULT_USER_PROFILE_IMAGES = [
 ];
 
 const DEFAULT_HEADER_CONTACT_IMAGE = 'https://wallpapercave.com/wp/wp2746574.jpg';
+const MESSAGE_TONE_URL = import.meta.env.VITE_MESSAGE_TONE_URL || `${import.meta.env.BASE_URL}notification.mp3`;
 
 const PRESET_CHAT_BACKGROUNDS = [
     {
@@ -355,6 +389,23 @@ function formatLastSeenLabel(value) {
         return '';
     }
 
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfValue = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    const diffDays = Math.round((startOfToday.getTime() - startOfValue.getTime()) / (24 * 60 * 60 * 1000));
+    const timeLabel = value.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    if (diffDays === 0) {
+        return `today at ${timeLabel}`;
+    }
+
+    if (diffDays === 1) {
+        return 'yesterday';
+    }
+
     return value.toLocaleString([], {
         day: '2-digit',
         month: 'short',
@@ -363,25 +414,148 @@ function formatLastSeenLabel(value) {
     });
 }
 
+function deriveSharedRoomId(secret) {
+    const input = String(secret || '').trim();
+    if (!input) {
+        return 'shared-room';
+    }
+
+    let hash = 0;
+    for (let index = 0; index < input.length; index += 1) {
+        hash = (hash << 5) - hash + input.charCodeAt(index);
+        hash |= 0;
+    }
+
+    return `shared-${Math.abs(hash).toString(36)}`;
+}
+
+function toChatDate(dateValue) {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (Number.isNaN(date.getTime())) {
+        const now = new Date();
+        return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    }
+
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+}
+
+function toChatTime(dateValue) {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    if (Number.isNaN(date.getTime())) {
+        return '--:--';
+    }
+
+    return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    }).toLowerCase();
+}
+
+function pseudonymFromUid(uidValue) {
+    const safeUid = String(uidValue || '').trim();
+    if (!safeUid) {
+        return 'Member';
+    }
+
+    const compact = safeUid.replace(/[^a-z0-9]/gi, '').slice(-4).toUpperCase();
+    return `Member ${compact || 'USER'}`;
+}
+
+function decryptDisplayNameSafely(encryptedValue, secret) {
+    const cipher = String(encryptedValue || '').trim();
+    if (!cipher || !secret) {
+        return '';
+    }
+
+    try {
+        const decrypted = decryptMessage(cipher, secret);
+        return String(decrypted || '').trim();
+    } catch {
+        return '';
+    }
+}
+
+function mapLiveMessageToUiMessage(entry, secret, viewerUserId, resolveSenderLabel) {
+    const createdAtMs = entry?.createdAt?.toMillis?.() || Date.now();
+    const createdAtDate = new Date(createdAtMs);
+    const isEncrypted = Boolean(entry?.encrypted);
+    let text = String(entry?.text || '');
+    let decryptionError = false;
+
+    if (isEncrypted) {
+        try {
+            text = decryptMessage(text, secret);
+        } catch {
+            text = '[Unable to decrypt message]';
+            decryptionError = true;
+        }
+    }
+
+    const senderUid = String(entry?.uid || entry?.sender || 'unknown');
+    const sender = resolveSenderLabel?.(senderUid, entry?.sender, entry?.senderEnc) || pseudonymFromUid(senderUid);
+    const deliveredTo = entry?.deliveredTo || {};
+    const readBy = entry?.readBy || {};
+    const otherDelivered = Object.entries(deliveredTo).some(([user, value]) => user !== senderUid && Boolean(value));
+    const otherRead = Object.entries(readBy).some(([user, value]) => user !== senderUid && Boolean(value));
+
+    let deliveryStatus = null;
+    if (senderUid === viewerUserId) {
+        deliveryStatus = otherRead ? 'read' : otherDelivered ? 'delivered' : 'sent';
+    }
+
+    return {
+        id: `live-${entry.id}`,
+        firestoreId: entry.id,
+        sender,
+        uid: senderUid,
+        message: text,
+        date: toChatDate(createdAtDate),
+        time: toChatTime(createdAtDate),
+        type: entry?.type || 'text',
+        isSystem: entry?.type === 'system',
+        reactions: entry?.reactions || {},
+        createdAtMs,
+        encrypted: isEncrypted,
+        decryptionError,
+        deliveredTo,
+        readBy,
+        deliveryStatus
+    };
+}
+
 function App() {
     const VIRTUALIZE_THRESHOLD = 350;
-    const [chatMode, setChatMode] = useState(() => {
-        const saved = localStorage.getItem('whatsapp-chat-mode');
-        return saved === 'formal' ? 'formal' : 'romantic';
-    });
-    const [themePreference, setThemePreference] = useState(() => {
-        const saved = localStorage.getItem('whatsapp-theme');
-        return ['light', 'dark', 'system'].includes(saved || '') ? saved : 'light';
-    });
+    const firebaseReady = isFirebaseConfigured();
+    const dispatch = useDispatch();
+    const authSession = useSelector(selectAuthSession);
+    const chatMode = useSelector(selectChatMode);
+    const themePreference = useSelector(selectThemePreference);
+    const currentUser = useSelector(selectCurrentUser);
+    const persistedRoomId = useSelector(selectLastRoomId);
+    const [authUid, setAuthUid] = useState('');
+    const [authReady, setAuthReady] = useState(() => !firebaseReady);
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
     const [messages, setMessages] = useState([]);
     const [users, setUsers] = useState([]);
-    const [currentUser, setCurrentUser] = useState('');
     const [fileName, setFileName] = useState('');
     const [error, setError] = useState('');
+    const [authError, setAuthError] = useState('');
+    const [firebaseError, setFirebaseError] = useState('');
     const [avatars, setAvatars] = useState({});
     const [chatBackground, setChatBackground] = useState('');
     const [search, setSearch] = useState('');
+    const [roomId, setRoomId] = useState(() => {
+        const fromUrl = new URLSearchParams(window.location.search).get('room');
+        return sanitizeRoomId(fromUrl || persistedRoomId || 'room1');
+    });
+    const [draftMessage, setDraftMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [liveLoading, setLiveLoading] = useState(false);
+    const [typingUsers, setTypingUsers] = useState({});
+    const [presenceUsers, setPresenceUsers] = useState({});
+    const [oldestCursor, setOldestCursor] = useState(null);
+    const [hasMoreHistory, setHasMoreHistory] = useState(false);
+    const [loadingOlder, setLoadingOlder] = useState(false);
     const [summary, setSummary] = useState('');
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
@@ -414,7 +588,206 @@ function App() {
     const virtuosoRef = useRef(null);
     const bottomAnchorRef = useRef(null);
     const defaultLoadedRef = useRef(false);
+    const migratedRoomsRef = useRef(new Set());
     const touchStartRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    const isTypingFirestoreRef = useRef(false);
+    const presenceOnlineRef = useRef(null);
+    const lastPresenceWriteRef = useRef(0);
+    const knownLiveMessageIdsRef = useRef(new Set());
+    const initialLiveSnapshotLoadedRef = useRef(false);
+    const notificationAudioContextRef = useRef(null);
+    const notificationSoundRef = useRef(null);
+    const audioUnlockedRef = useRef(false);
+    const pendingIncomingToneRef = useRef(false);
+    const hasExplicitRoomRef = useRef(Boolean(new URLSearchParams(window.location.search).get('room') || persistedRoomId));
+    const deliveredMarkedRef = useRef(new Set());
+    const readMarkedRef = useRef(new Set());
+
+    const authSecret = authSession?.secret || '';
+    const isLoggedIn = Boolean(authSession?.displayName && authSession?.secret);
+    const userId = authUid || currentUser;
+    const encryptedCurrentUserName = useMemo(() => {
+        const safeCurrentUser = String(currentUser || '').trim();
+        if (!safeCurrentUser || !authSecret) {
+            return '';
+        }
+
+        try {
+            return encryptMessage(safeCurrentUser, authSecret);
+        } catch {
+            return '';
+        }
+    }, [currentUser, authSecret]);
+
+    const resolveLiveSenderLabel = useCallback(
+        (uidValue, legacySender, encryptedSender) => {
+            const safeUid = String(uidValue || '').trim();
+            if (safeUid && safeUid === authUid) {
+                return currentUser || authSession?.displayName || 'You';
+            }
+
+            const decryptedSender = decryptDisplayNameSafely(encryptedSender, authSecret);
+            if (decryptedSender) {
+                return decryptedSender;
+            }
+
+            const legacyLabel = String(legacySender || '').trim();
+            if (legacyLabel && safeUid && legacyLabel !== safeUid) {
+                return legacyLabel;
+            }
+
+            return pseudonymFromUid(safeUid || legacyLabel);
+        },
+        [authUid, currentUser, authSession?.displayName, authSecret]
+    );
+
+    const playSynthPing = useCallback((ctx) => {
+        const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.0001, now);
+        masterGain.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+        masterGain.connect(ctx.destination);
+
+        const osc1 = ctx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(840, now);
+        osc1.frequency.exponentialRampToValueAtTime(1040, now + 0.18);
+        osc1.connect(masterGain);
+
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(680, now + 0.05);
+        osc2.frequency.exponentialRampToValueAtTime(900, now + 0.26);
+        osc2.connect(masterGain);
+
+        osc1.start(now);
+        osc1.stop(now + 0.24);
+        osc2.start(now + 0.06);
+        osc2.stop(now + 0.38);
+    }, []);
+
+    const ensureNotificationAudioElement = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        if (!notificationSoundRef.current) {
+            try {
+                const tone = new Audio(MESSAGE_TONE_URL);
+                tone.preload = 'auto';
+                tone.volume = 0.65;
+                notificationSoundRef.current = tone;
+            } catch {
+                notificationSoundRef.current = null;
+            }
+        }
+
+        return notificationSoundRef.current;
+    }, []);
+
+    const unlockNotificationAudio = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            const tone = ensureNotificationAudioElement();
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+            if (AudioContextClass) {
+                if (!notificationAudioContextRef.current) {
+                    notificationAudioContextRef.current = new AudioContextClass();
+                }
+
+                const ctx = notificationAudioContextRef.current;
+                if (ctx.state !== 'running') {
+                    ctx.resume().catch(() => {
+                        // Ignore resume failures due to browser gesture policies.
+                    });
+                }
+            }
+
+            if (tone) {
+                // Prime the element on user gesture so later plays are less likely to be blocked.
+                const previousTime = tone.currentTime;
+                const unlockPromise = tone.play();
+                if (unlockPromise?.then) {
+                    unlockPromise
+                        .then(() => {
+                            tone.pause();
+                            tone.currentTime = previousTime || 0;
+                        })
+                        .catch(() => {
+                            // Ignore element unlock failures; synth fallback may still work.
+                        });
+                }
+            }
+
+            audioUnlockedRef.current = true;
+
+            if (pendingIncomingToneRef.current) {
+                pendingIncomingToneRef.current = false;
+                if (tone) {
+                    tone.currentTime = 0;
+                    tone.play().catch(() => {
+                        const ctx = notificationAudioContextRef.current;
+                        if (ctx?.state === 'running') {
+                            playSynthPing(ctx);
+                        }
+                    });
+                    return;
+                }
+
+                const ctx = notificationAudioContextRef.current;
+                if (ctx?.state === 'running') {
+                    playSynthPing(ctx);
+                }
+            }
+        } catch {
+            // Do not block chat flow if audio unlock fails.
+        }
+    }, [ensureNotificationAudioElement, playSynthPing]);
+
+    const playIncomingMessageTone = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        try {
+            const tone = ensureNotificationAudioElement();
+
+            if (tone) {
+                tone.currentTime = 0;
+                tone.play().catch(() => {
+                    const ctx = notificationAudioContextRef.current;
+                    if (ctx?.state === 'running') {
+                        playSynthPing(ctx);
+                        return;
+                    }
+
+                    pendingIncomingToneRef.current = true;
+                });
+                return;
+            }
+
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass && !notificationAudioContextRef.current) {
+                notificationAudioContextRef.current = new AudioContextClass();
+            }
+
+            const ctx = notificationAudioContextRef.current;
+            if (ctx?.state === 'running' && audioUnlockedRef.current) {
+                playSynthPing(ctx);
+                return;
+            }
+
+            pendingIncomingToneRef.current = true;
+        } catch {
+            // Do not block chat flow if audio playback fails.
+        }
+    }, [ensureNotificationAudioElement, playSynthPing]);
 
     const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
     const replaySourceMessages = useMemo(
@@ -495,14 +868,96 @@ function App() {
 
     useEffect(() => {
         document.documentElement.setAttribute('data-chat-mode', chatMode);
-        localStorage.setItem('whatsapp-chat-mode', chatMode);
     }, [chatMode]);
 
     useEffect(() => {
-        localStorage.setItem('whatsapp-theme', themePreference);
-    }, [themePreference]);
+        if (!firebaseReady) {
+            setAuthReady(true);
+            return;
+        }
+
+        if (!auth) return; // IMPORTANT safety check
+
+        let cancelled = false;
+
+        signInAnonymously(auth)
+            .then((credential) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setAuthUid(credential.user?.uid || '');
+                setAuthReady(true);
+                console.log('✅ Anonymous login successful');
+            })
+            .catch((err) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setFirebaseError('Anonymous login failed. Enable Anonymous Auth in Firebase Console.');
+                setAuthReady(true);
+                console.error('❌ Auth error:', err);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [firebaseReady]);
 
     useEffect(() => {
+        if (!roomId) {
+            return;
+        }
+
+        dispatch(setLastRoomId(roomId));
+    }, [dispatch, roomId]);
+
+    useEffect(() => {
+        knownLiveMessageIdsRef.current.clear();
+        initialLiveSnapshotLoadedRef.current = false;
+    }, [roomId, authUid, isLoggedIn]);
+
+    useEffect(() => {
+        const handleUnlock = () => {
+            unlockNotificationAudio();
+        };
+
+        window.addEventListener('pointerdown', handleUnlock, { passive: true });
+        window.addEventListener('keydown', handleUnlock, { passive: true });
+        window.addEventListener('touchstart', handleUnlock, { passive: true });
+
+        return () => {
+            window.removeEventListener('pointerdown', handleUnlock);
+            window.removeEventListener('keydown', handleUnlock);
+            window.removeEventListener('touchstart', handleUnlock);
+        };
+    }, [unlockNotificationAudio]);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        dispatch(setCurrentUser(authSession.displayName));
+    }, [dispatch, isLoggedIn, authSession?.displayName]);
+
+    useEffect(() => {
+        if (!authSession?.secret) {
+            return;
+        }
+
+        const sharedRoomId = deriveSharedRoomId(authSession.secret);
+        hasExplicitRoomRef.current = true;
+        setRoomId(sharedRoomId);
+        dispatch(setLastRoomId(sharedRoomId));
+    }, [dispatch, authSession?.secret]);
+
+    useEffect(() => {
+        if (firebaseReady) {
+            return;
+        }
+
         if (defaultLoadedRef.current) {
             return;
         }
@@ -518,6 +973,208 @@ function App() {
             setError('Could not load sample chat file.');
         }
     }, []);
+
+    useEffect(() => {
+        if (!firebaseReady || !isLoggedIn || !roomId) {
+            return;
+        }
+
+        const safeRoomId = sanitizeRoomId(roomId);
+        if (!safeRoomId || migratedRoomsRef.current.has(safeRoomId)) {
+            return;
+        }
+
+        migratedRoomsRef.current.add(safeRoomId);
+        scrubLegacyRoomMetadata(safeRoomId).catch(() => {
+            // Migration is best-effort; leave chat usable if cleanup fails.
+        });
+    }, [firebaseReady, isLoggedIn, roomId]);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        if (!firebaseReady || !authUid) {
+            return;
+        }
+
+        setLiveLoading(true);
+        setFirebaseError('');
+        setAuthError('');
+        deliveredMarkedRef.current.clear();
+        readMarkedRef.current.clear();
+
+        const unsubMessages = subscribeToRoomMessages(
+            roomId,
+            (entries, meta) => {
+                const mappedMessages = entries.map((entry) => mapLiveMessageToUiMessage(entry, authSecret, authUid, resolveLiveSenderLabel));
+                const liveUsers = Array.from(new Set(mappedMessages.map((item) => item.sender).filter(Boolean)));
+                const hasDecryptErrors = mappedMessages.some((item) => item.decryptionError);
+                const knownIds = knownLiveMessageIdsRef.current;
+
+                if (!initialLiveSnapshotLoadedRef.current) {
+                    mappedMessages.forEach((item) => knownIds.add(item.id));
+                    initialLiveSnapshotLoadedRef.current = true;
+                } else {
+                    const hasNewIncoming = mappedMessages.some(
+                        (item) => !knownIds.has(item.id) && item.uid !== authUid && !item.isSystem
+                    );
+
+                    mappedMessages.forEach((item) => knownIds.add(item.id));
+
+                    if (hasNewIncoming) {
+                        playIncomingMessageTone();
+                    }
+                }
+
+                setMessages((prev) => {
+                    const latestIds = new Set(mappedMessages.map((item) => item.id));
+                    const firstLatestTime = mappedMessages[0]?.createdAtMs || Number.POSITIVE_INFINITY;
+                    const carryOlder = prev.filter((item) => !latestIds.has(item.id) && (item.createdAtMs || 0) < firstLatestTime);
+                    return [...carryOlder, ...mappedMessages].sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
+                });
+
+                setUsers(liveUsers);
+                setOldestCursor(meta?.oldestCursor || null);
+                setHasMoreHistory(Boolean(meta?.hasMore));
+                setError('');
+                setLiveLoading(false);
+
+                if (hasDecryptErrors) {
+                    setAuthError('Wrong common password for some encrypted messages.');
+                    setFirebaseError('Wrong password: unable to decrypt one or more messages.');
+                }
+            },
+            () => {
+                setFirebaseError('Unable to sync messages. Check Firebase rules/config.');
+                setLiveLoading(false);
+            }
+        );
+
+        const unsubTyping = subscribeTypingStatus(
+            roomId,
+            (nextTypingMap) => {
+                setTypingUsers(nextTypingMap);
+            },
+            () => {
+                setFirebaseError('Typing status sync failed.');
+            }
+        );
+
+        const unsubUsers = subscribeRoomUsers(
+            roomId,
+            (nextPresenceMap) => {
+                setPresenceUsers(nextPresenceMap);
+            },
+            () => {
+                setFirebaseError('Presence sync failed.');
+            }
+        );
+
+        return () => {
+            unsubMessages?.();
+            unsubTyping?.();
+            unsubUsers?.();
+        };
+    }, [firebaseReady, roomId, authSecret, authUid, isLoggedIn, resolveLiveSenderLabel, playIncomingMessageTone]);
+
+    useEffect(() => {
+        return () => {
+            if (notificationSoundRef.current) {
+                notificationSoundRef.current.pause();
+                notificationSoundRef.current.src = '';
+            }
+            notificationAudioContextRef.current?.close?.().catch(() => {
+                // Ignore audio context close failures.
+            });
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        if (!firebaseReady || !userId) {
+            return;
+        }
+
+        const markPresence = async (online, { force = false } = {}) => {
+            const nowMs = Date.now();
+            const sameState = presenceOnlineRef.current === online;
+
+            if (!force && sameState && nowMs - lastPresenceWriteRef.current < 25000) {
+                return;
+            }
+
+            try {
+                await setRoomUserPresence(roomId, userId, online, encryptedCurrentUserName);
+                presenceOnlineRef.current = online;
+                lastPresenceWriteRef.current = nowMs;
+            } catch {
+                setFirebaseError('Unable to update online status.');
+            }
+        };
+
+        presenceOnlineRef.current = null;
+        markPresence(true, { force: true });
+        const heartbeat = window.setInterval(() => {
+            if (!document.hidden) {
+                markPresence(true);
+            }
+        }, 45000);
+
+        const handleVisibility = () => {
+            if (document.hidden) {
+                markPresence(false, { force: true });
+            } else {
+                markPresence(true, { force: true });
+            }
+        };
+
+        const handleOnline = () => {
+            markPresence(true, { force: true });
+        };
+
+        const handleOffline = () => {
+            markPresence(false, { force: true });
+        };
+
+        const handleBeforeUnload = () => {
+            markPresence(false, { force: true });
+        };
+
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.clearInterval(heartbeat);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            markPresence(false, { force: true });
+        };
+    }, [firebaseReady, roomId, userId, currentUser, authSession?.displayName, isLoggedIn, encryptedCurrentUserName]);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        if (!firebaseReady || !userId) {
+            return;
+        }
+
+        return () => {
+            setTypingStatus(roomId, userId, false, encryptedCurrentUserName).catch(() => {
+                // Avoid surfacing cleanup errors to users.
+            });
+        };
+    }, [firebaseReady, roomId, userId, currentUser, isLoggedIn, encryptedCurrentUserName]);
 
     useEffect(() => {
         messageRefs.current = {};
@@ -551,9 +1208,65 @@ function App() {
     }, [visibleMessages, isTyping, replayMode, shouldReduceMotion]);
 
     useEffect(() => {
+        if (replayMode || showInsights) {
+            return;
+        }
+
+        bottomAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'end' });
+    }, [messages.length, replayMode, showInsights, shouldReduceMotion]);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            return;
+        }
+
+        if (!firebaseReady || !authUid || !messages.length) {
+            return;
+        }
+
+        const markDeliveryPromises = [];
+        const markReadPromises = [];
+
+        messages.forEach((message) => {
+            if (!message.firestoreId || message.uid === authUid) {
+                return;
+            }
+
+            const deliveredKey = `${message.firestoreId}:${authUid}:delivered`;
+            const readKey = `${message.firestoreId}:${authUid}:read`;
+
+            if (!message.deliveredTo?.[authUid] && !deliveredMarkedRef.current.has(deliveredKey)) {
+                deliveredMarkedRef.current.add(deliveredKey);
+                markDeliveryPromises.push(markMessageDelivered(roomId, message.firestoreId, authUid));
+            }
+
+            if (!document.hidden && !message.readBy?.[authUid] && !readMarkedRef.current.has(readKey)) {
+                readMarkedRef.current.add(readKey);
+                markReadPromises.push(markMessageRead(roomId, message.firestoreId, authUid));
+            }
+        });
+
+        if (markDeliveryPromises.length) {
+            Promise.allSettled(markDeliveryPromises).catch(() => {
+                setFirebaseError('Unable to update delivered status.');
+            });
+        }
+
+        if (markReadPromises.length) {
+            Promise.allSettled(markReadPromises).catch(() => {
+                setFirebaseError('Unable to update read status.');
+            });
+        }
+    }, [firebaseReady, authUid, messages, roomId, isLoggedIn]);
+
+    useEffect(() => {
         return () => {
             if (parseFlushTimerRef.current) {
                 window.clearTimeout(parseFlushTimerRef.current);
+            }
+
+            if (typingTimeoutRef.current) {
+                window.clearTimeout(typingTimeoutRef.current);
             }
         };
     }, []);
@@ -608,10 +1321,16 @@ function App() {
         if (!users.length) {
             return;
         }
-        if (!currentUser || !users.includes(currentUser)) {
-            setCurrentUser(users[0]);
+
+        if (!currentUser) {
+            dispatch(setCurrentUser(users[0]));
+            return;
         }
-    }, [users, currentUser]);
+
+        if (!firebaseReady && !users.includes(currentUser)) {
+            dispatch(setCurrentUser(users[0]));
+        }
+    }, [dispatch, users, currentUser, firebaseReady]);
 
     const scrollToSearchMatch = useCallback((nextIndex) => {
         if (!highlightedIds.length) {
@@ -695,34 +1414,139 @@ function App() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [groupedMessages.length, isPlaying, replayMode]);
 
-    const otherUser = users.find((user) => user !== currentUser) || users[0] || 'Contact';
+    const otherParticipantNames = useMemo(() => {
+        const selfUid = String(authUid || '').trim();
+        const selfNames = new Set(
+            [currentUser, authSession?.displayName, resolveLiveSenderLabel(selfUid)]
+                .map((value) => String(value || '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+        const seen = new Set();
+        const orderedNames = [];
+
+        for (let index = groupedMessages.length - 1; index >= 0; index -= 1) {
+            const messageUid = String(groupedMessages[index]?.uid || '').trim();
+            if (selfUid && messageUid === selfUid) {
+                continue;
+            }
+
+            const sender = String(groupedMessages[index]?.sender || '').trim();
+            const normalizedSender = sender.toLowerCase();
+
+            if (!sender || groupedMessages[index]?.isSystem || selfNames.has(normalizedSender) || seen.has(normalizedSender)) {
+                continue;
+            }
+
+            seen.add(normalizedSender);
+            orderedNames.push(sender);
+        }
+
+        Object.entries(presenceUsers).forEach(([uid, entry]) => {
+            if (selfUid && String(uid || '').trim() === selfUid) {
+                return;
+            }
+
+            const name = decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid);
+            const normalizedName = name.toLowerCase();
+
+            if (!name || selfNames.has(normalizedName) || seen.has(normalizedName)) {
+                return;
+            }
+
+            seen.add(normalizedName);
+            orderedNames.push(name);
+        });
+
+        users.forEach((user) => {
+            const name = String(user || '').trim();
+            const normalizedName = name.toLowerCase();
+
+            if (!name || selfNames.has(normalizedName) || seen.has(normalizedName)) {
+                return;
+            }
+
+            seen.add(normalizedName);
+            orderedNames.push(name);
+        });
+
+        return orderedNames;
+    }, [groupedMessages, presenceUsers, users, currentUser, authSession?.displayName, authUid, resolveLiveSenderLabel, authSecret]);
+    const otherUser = otherParticipantNames[0] || 'Waiting for others';
+    const contactName = otherUser;
     const contactMessages = useMemo(
-        () => groupedMessages.filter((message) => message.sender === otherUser),
-        [groupedMessages, otherUser]
+        () => groupedMessages.filter((message) => message.sender === contactName),
+        [groupedMessages, contactName]
     );
     const contactMeta = useMemo(() => {
-        if (!contactMessages.length) {
+        const livePresenceEntries = Object.entries(presenceUsers).filter(([uid]) => uid !== authUid);
+        const livePresence =
+            livePresenceEntries.find(([uid, entry]) => (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)) === contactName)?.[1] ||
+            livePresenceEntries.find(([uid, entry]) => (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)) === otherUser)?.[1] ||
+            livePresenceEntries[0]?.[1] ||
+            null;
+        const liveOnlineEntries = livePresenceEntries.filter(([, entry]) => Boolean(entry?.online));
+        const onlineNames = liveOnlineEntries
+            .map(([uid, entry]) => decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid))
+            .filter(Boolean);
+
+        if (!contactMessages.length && !livePresence) {
             return {
                 isOnline: false,
                 lastSeenLabel: '',
+                statusLine: 'Last seen recently',
                 messageCount: 0,
                 activeDayCount: 0
             };
         }
 
-        const lastMessage = contactMessages[contactMessages.length - 1];
-        const lastSeenDate = parseChatDateTime(lastMessage.date, lastMessage.time);
+        const lastMessage = contactMessages[contactMessages.length - 1] || null;
+        const lastSeenDate = lastMessage ? parseChatDateTime(lastMessage.date, lastMessage.time) : null;
         const activeDays = new Set(contactMessages.map((message) => message.date));
+        const liveLastSeenRaw = livePresence?.lastSeen?.toDate?.() || null;
+        const effectiveLastSeen = liveLastSeenRaw || lastSeenDate;
         const now = new Date();
-        const diffMs = lastSeenDate ? Math.abs(now.getTime() - lastSeenDate.getTime()) : Number.POSITIVE_INFINITY;
+        const diffMs = effectiveLastSeen ? Math.abs(now.getTime() - effectiveLastSeen.getTime()) : Number.POSITIVE_INFINITY;
+        const liveOnline = typeof livePresence?.online === 'boolean' ? livePresence.online : null;
+        const isOnline = liveOnlineEntries.length > 0 || (liveOnline ?? diffMs <= 5 * 60 * 1000);
+        let statusLine = 'Last seen recently';
+
+        if (liveOnlineEntries.length > 1) {
+            statusLine = `${liveOnlineEntries.length} users online`;
+        } else if (liveOnlineEntries.length === 1) {
+            statusLine = `${onlineNames[0] || 'Someone'} is online`;
+        } else {
+            const formattedLastSeen = formatLastSeenLabel(effectiveLastSeen);
+            statusLine = formattedLastSeen ? `Last seen ${formattedLastSeen}` : 'Last seen recently';
+        }
 
         return {
-            isOnline: diffMs <= 5 * 60 * 1000,
-            lastSeenLabel: formatLastSeenLabel(lastSeenDate),
+            isOnline,
+            lastSeenLabel: formatLastSeenLabel(effectiveLastSeen),
+            statusLine,
             messageCount: contactMessages.length,
             activeDayCount: activeDays.size
         };
-    }, [contactMessages]);
+    }, [contactMessages, presenceUsers, contactName, otherUser, authUid, authSecret]);
+
+    const typingIndicatorText = useMemo(() => {
+        const liveTypingUsers = Object.entries(typingUsers)
+            .filter(([uid, value]) => uid !== authUid && Boolean(value?.isTyping))
+            .map(([uid, value]) => decryptDisplayNameSafely(value?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid));
+
+        if (!liveTypingUsers.length) {
+            return '';
+        }
+
+        if (liveTypingUsers.length === 1) {
+            return `${liveTypingUsers[0]} is typing...`;
+        }
+
+        if (liveTypingUsers.length === 2) {
+            return `${liveTypingUsers[0]}, ${liveTypingUsers[1]} are typing...`;
+        }
+
+        return `${liveTypingUsers[0]}, ${liveTypingUsers[1]} and ${liveTypingUsers.length - 2} other${liveTypingUsers.length - 2 > 1 ? 's' : ''} are typing...`;
+    }, [typingUsers, authUid, authSecret]);
 
     const shouldRenderDateChip = (list, index) => {
         if (index === 0) {
@@ -890,6 +1714,215 @@ function App() {
         }
     };
 
+    const handleToggleTimeline = () => {
+        setShowTimeline((prev) => {
+            const next = !prev;
+
+            // Closing timeline should also stop/reset replay so chat returns to normal.
+            if (!next) {
+                handleResetReplay();
+            }
+
+            return next;
+        });
+    };
+
+    const handleSecretLogin = ({ displayName, secret }) => {
+        const safeDisplayName = String(displayName || '').trim();
+        const safeSecret = String(secret || '');
+
+        if (safeDisplayName.length < 2 || safeSecret.length < 6) {
+            setAuthError('Use a valid display name and common password.');
+            return;
+        }
+
+        const nextSession = {
+            displayName: safeDisplayName,
+            secret: safeSecret
+        };
+
+        setAuthError('');
+        dispatch(setAuthSession(nextSession));
+        dispatch(setCurrentUser(safeDisplayName));
+
+        const sharedRoomId = deriveSharedRoomId(safeSecret);
+        hasExplicitRoomRef.current = true;
+        setRoomId(sharedRoomId);
+        dispatch(setLastRoomId(sharedRoomId));
+        resetRoomTimelineState();
+    };
+
+    const handleLogout = async () => {
+        if (firebaseReady && isLoggedIn) {
+            await Promise.allSettled([
+                setTypingStatus(roomId, userId, false, encryptedCurrentUserName),
+                setRoomUserPresence(roomId, userId, false, encryptedCurrentUserName)
+            ]);
+        }
+
+        deliveredMarkedRef.current.clear();
+        readMarkedRef.current.clear();
+        setMessages([]);
+        setUsers([]);
+        setTypingUsers({});
+        setPresenceUsers({});
+        setDraftMessage('');
+        setSearch('');
+        setError('');
+        setAuthError('');
+        setFirebaseError('');
+        resetRoomTimelineState();
+        dispatch(clearAuthSession());
+        setRoomId('room1');
+    };
+
+    const resetRoomTimelineState = () => {
+        setReplayMode(false);
+        setIsPlaying(false);
+        setVisibleMessages([]);
+        setMessages([]);
+        setOldestCursor(null);
+        setHasMoreHistory(false);
+    };
+
+    const handleLoadOlderMessages = useCallback(async () => {
+        if (!firebaseReady || !authUid || !oldestCursor || loadingOlder || !hasMoreHistory) {
+            return;
+        }
+
+        setLoadingOlder(true);
+        try {
+            const page = await fetchOlderRoomMessages(roomId, oldestCursor);
+            const mappedOlder = page.messages.map((entry) => mapLiveMessageToUiMessage(entry, authSecret, authUid, resolveLiveSenderLabel));
+
+            setMessages((prev) => {
+                const existing = new Map(prev.map((item) => [item.id, item]));
+                mappedOlder.forEach((item) => {
+                    if (!existing.has(item.id)) {
+                        existing.set(item.id, item);
+                    }
+                });
+                return Array.from(existing.values()).sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
+            });
+
+            setOldestCursor(page.oldestCursor);
+            setHasMoreHistory(Boolean(page.hasMore));
+        } catch {
+            setFirebaseError('Unable to load older messages.');
+        } finally {
+            setLoadingOlder(false);
+        }
+    }, [firebaseReady, authUid, oldestCursor, loadingOlder, hasMoreHistory, roomId, authSecret, resolveLiveSenderLabel]);
+
+    const handleLiveDraftChange = (nextValue) => {
+        setDraftMessage(nextValue);
+
+        if (!firebaseReady || !userId) {
+            return;
+        }
+
+        const typing = Boolean(nextValue.trim());
+
+        // If cleared to empty — immediately mark not typing
+        if (!typing) {
+            if (isTypingFirestoreRef.current) {
+                isTypingFirestoreRef.current = false;
+                if (typingTimeoutRef.current) {
+                    window.clearTimeout(typingTimeoutRef.current);
+                    typingTimeoutRef.current = null;
+                }
+                setTypingStatus(roomId, userId, false, encryptedCurrentUserName).catch(() => {
+                    setFirebaseError('Unable to update typing indicator.');
+                });
+            }
+            return;
+        }
+
+        // Only write to Firestore on transition: not typing → typing
+        if (!isTypingFirestoreRef.current) {
+            isTypingFirestoreRef.current = true;
+            setTypingStatus(roomId, userId, true, encryptedCurrentUserName).catch(() => {
+                setFirebaseError('Unable to update typing indicator.');
+            });
+        }
+
+        // Reset stop-typing debounce on every keystroke
+        if (typingTimeoutRef.current) {
+            window.clearTimeout(typingTimeoutRef.current);
+        }
+
+        typingTimeoutRef.current = window.setTimeout(() => {
+            isTypingFirestoreRef.current = false;
+            setTypingStatus(roomId, userId, false, encryptedCurrentUserName).catch(() => {
+                setFirebaseError('Unable to update typing indicator.');
+            });
+        }, 1500);
+    };
+
+    const handleSendLiveMessage = async () => {
+        if (!firebaseReady) {
+            setFirebaseError('Firebase config is missing. Add VITE_FIREBASE_* values.');
+            return;
+        }
+
+        if (!authSecret) {
+            setFirebaseError('Common password missing. Please log in again.');
+            return;
+        }
+
+        if (!authUid) {
+            setFirebaseError('Anonymous auth not ready yet. Please wait.');
+            return;
+        }
+
+        const safeText = String(draftMessage || '').trim();
+        if (!safeText) {
+            return;
+        }
+
+        if (safeText.length > 1200) {
+            setFirebaseError('Message is too long (max 1200 chars).');
+            return;
+        }
+
+        if (!currentUser.trim()) {
+            setFirebaseError('Select current user in settings before sending.');
+            return;
+        }
+
+        setIsSending(true);
+        setFirebaseError('');
+        try {
+            const encryptedText = encryptMessage(safeText, authSecret);
+            await sendRoomMessage(roomId, {
+                text: encryptedText,
+                senderEnc: encryptedCurrentUserName,
+                uid: authUid,
+                type: 'text',
+                encrypted: true,
+                cipherVersion: 'aes-v1'
+            });
+            setDraftMessage('');
+            await setTypingStatus(roomId, userId, false, encryptedCurrentUserName);
+        } catch (sendError) {
+            setFirebaseError(sendError?.message || 'Unable to send message.');
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    const handleAddReaction = async (message, emoji) => {
+        if (!firebaseReady || !message?.firestoreId) {
+            return;
+        }
+
+        try {
+            await addMessageReaction(roomId, message.firestoreId, emoji);
+        } catch {
+            setFirebaseError('Unable to add reaction.');
+        }
+    };
+
     const handleAvatarUpload = (user, file) => {
         if (!file) {
             return;
@@ -924,7 +1957,7 @@ function App() {
         }
 
         if (['light', 'dark', 'system'].includes(nextTheme)) {
-            setThemePreference(nextTheme);
+            dispatch(setThemePreference(nextTheme));
         }
     };
 
@@ -960,7 +1993,43 @@ function App() {
             return;
         }
 
-        setThemePreference(resolvedTheme === 'dark' ? 'light' : 'dark');
+        dispatch(setThemePreference(resolvedTheme === 'dark' ? 'light' : 'dark'));
+    };
+
+    const handleChatSurfaceToggleReplay = (event) => {
+        if (!showTimeline || !replayMode || showInsights) {
+            return;
+        }
+
+        const interactiveTarget = event.target?.closest?.(
+            'button, a, input, textarea, select, label, [role="button"], [data-no-replay-toggle="true"]'
+        );
+
+        if (interactiveTarget) {
+            return;
+        }
+
+        if (isPlaying) {
+            handlePauseReplay();
+            return;
+        }
+
+        setIsPlaying(true);
+    };
+
+    const handleChatScroll = (event) => {
+        if (!firebaseReady || replayMode || showInsights) {
+            return;
+        }
+
+        const target = event.currentTarget;
+        if (!target) {
+            return;
+        }
+
+        if (target.scrollTop <= 120) {
+            handleLoadOlderMessages();
+        }
     };
 
     const handleExport = async () => {
@@ -1017,17 +2086,40 @@ function App() {
         handleSearchNext();
     };
 
+    if (!isLoggedIn) {
+        return (
+            <SecretLogin
+                onLogin={handleSecretLogin}
+                errorMessage={authError}
+                theme={resolvedTheme}
+                onThemeChange={handleThemeChange}
+                chatMode={chatMode}
+                onChatModeChange={(nextMode) => dispatch(setChatMode(nextMode))}
+            />
+        );
+    }
+
+    if (firebaseReady && !authReady) {
+        return (
+            <div className="relative flex h-screen w-full items-center justify-center overflow-hidden px-4">
+                <div className="hero-orb left-[-90px] top-[8%] h-56 w-56 bg-slate-300/30" />
+                <div className="hero-orb right-[-70px] top-[18%] h-72 w-72 bg-slate-400/25" />
+                <div className="glass-panel rounded-[1.2rem] px-6 py-4 text-sm text-[var(--text-main)]">Signing in anonymously...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="relative flex h-screen w-full flex-col overflow-hidden">
             <div className="hero-orb left-[-90px] top-[8%] h-56 w-56 bg-slate-300/30" />
             <div className="hero-orb right-[-70px] top-[18%] h-72 w-72 bg-slate-400/25" />
 
-            <div className="mx-auto flex h-full w-full flex-col">
+            <div className="mx-auto flex h-full w-full max-w-[1680px] flex-col">
                 <main className="glass-panel-strong relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none ambient-ring premium-panel-strong">
                     <div ref={chatCaptureRef} className="chat-shell-stage flex h-full min-h-0 flex-col bg-[var(--chat-shell)]">
                         <ChatHeader
-                            title={otherUser}
-                            avatar={avatars[otherUser] || defaultAvatarMap[otherUser] || DEFAULT_HEADER_CONTACT_IMAGE}
+                            title={contactName}
+                            avatar={avatars[contactName] || avatars[otherUser] || defaultAvatarMap[contactName] || defaultAvatarMap[otherUser] || DEFAULT_HEADER_CONTACT_IMAGE}
                             theme={resolvedTheme}
                             onThemeChange={(nextTheme) => handleThemeChange(nextTheme)}
                             contactMeta={contactMeta}
@@ -1054,9 +2146,10 @@ function App() {
                             showSearch={showSearch}
                             onToggleSearch={() => setShowSearch((prev) => !prev)}
                             showTimeline={showTimeline}
-                            onToggleTimeline={() => setShowTimeline((prev) => !prev)}
+                            onToggleTimeline={handleToggleTimeline}
                             showInsights={showInsights}
                             onToggleInsights={() => setShowInsights((prev) => !prev)}
+                            onLogout={handleLogout}
                         />
                         <ReplayControls
                             hasMessages={groupedMessages.length > 0}
@@ -1084,12 +2177,15 @@ function App() {
 
                         <section
                             ref={chatScrollRef}
-                            className="chat-wallpaper scroll-thin relative flex-1 overflow-x-hidden overflow-y-auto px-2.5 pb-14 pt-4 md:px-6 md:py-6"
+                            className="chat-wallpaper scroll-thin relative flex-1 overflow-x-hidden overflow-y-auto px-4 pb-16 pt-4 md:px-6 md:pb-20 md:pt-6"
+                            onScroll={handleChatScroll}
+                            onClick={handleChatSurfaceToggleReplay}
                             onTouchStart={handleThemeSwipeStart}
                             onTouchEnd={handleThemeSwipeEnd}
                             style={{
-                                backgroundImage: `url(${activeChatBackground})`,
-                                backgroundSize: 'cover',
+                                backgroundImage: `url(${activeChatBackground}), var(--wallpaper-pattern), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))`,
+                                backgroundSize: 'cover, 140px 140px, cover',
+                                backgroundPosition: 'center center, center center, center center',
                                 '--accent': backgroundTheme.accent,
                                 '--bubble-sent-start': backgroundTheme.sentStart,
                                 '--bubble-sent-end': backgroundTheme.sentEnd,
@@ -1099,22 +2195,39 @@ function App() {
                                 '--bubble-received-start': backgroundTheme.receivedStart,
                                 '--bubble-received-end': backgroundTheme.receivedEnd,
                                 '--bubble-received-border': backgroundTheme.receivedBorder,
-                                '--bubble-received-shadow': backgroundTheme.receivedShadow,
-                                '--chat-overlay-top': backgroundTheme.overlayTop,
-                                '--chat-overlay-mid': backgroundTheme.overlayMid,
-                                '--chat-overlay-bottom': backgroundTheme.overlayBottom
+                                '--bubble-received-shadow': backgroundTheme.receivedShadow
                             }}
                         >
-                            <div
-                                className="pointer-events-none absolute inset-0"
-                                style={{
-                                    background:
-                                        'linear-gradient(180deg, var(--chat-overlay-top), var(--chat-overlay-mid), var(--chat-overlay-bottom))'
-                                }}
-                            />
                             <div className="relative z-10 mx-auto w-full md:max-w-4xl">
+                                {firebaseReady && hasMoreHistory ? (
+                                    <div className="mb-2 flex justify-center">
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={handleLoadOlderMessages}
+                                            disabled={loadingOlder}
+                                            className="h-8 px-3 text-xs"
+                                        >
+                                            {loadingOlder ? 'Loading older...' : 'Load older messages'}
+                                        </Button>
+                                    </div>
+                                ) : null}
+
                                 {showInsights ? (
-                                    <ChatInsights messages={messages} />
+                                    <div className="relative">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setShowInsights(false)}
+                                            className="header-icon-button absolute right-2 top-2 z-20 h-9 w-9 bg-white/78 dark:bg-slate-950/72"
+                                            aria-label="Close analysis and return to chat"
+                                            title="Close analysis"
+                                        >
+                                            <X size={16} />
+                                        </Button>
+                                        <ChatInsights messages={messages} />
+                                    </div>
                                 ) : groupedMessages.length === 0 && isParsing ? (
                                     <div className="flex h-full min-h-[42vh] items-center justify-center px-4 text-center">
                                         <motion.div
@@ -1181,7 +2294,7 @@ function App() {
                                                 overscan={500}
                                                 increaseViewportBy={{ top: 800, bottom: 1200 }}
                                                 itemContent={(index, message) => {
-                                                    const isCurrentUser = currentUser && message.sender === currentUser;
+                                                    const isCurrentUser = (Boolean(authUid) && message.uid === authUid) || (currentUser && message.sender === currentUser);
                                                     const showDateChip = shouldRenderDateChip(displayedMessages, index);
 
                                                     return (
@@ -1197,10 +2310,12 @@ function App() {
                                                             <ChatBubble
                                                                 message={message}
                                                                 isCurrentUser={isCurrentUser}
+                                                                currentUser={currentUser}
                                                                 avatar={avatars[message.sender] || defaultAvatarMap[message.sender]}
                                                                 query={search}
                                                                 isMatch={highlightedIdSet.has(message.id) || activeSearchId === message.id}
                                                                 animateEntry={false}
+                                                                onAddReaction={handleAddReaction}
                                                                 onReplayFrom={() => {
                                                                     const nextIndex = Math.max(index, 0);
                                                                     setReplaySegment('from-here');
@@ -1220,7 +2335,7 @@ function App() {
                                         ) : (
                                             <AnimatePresence initial={false} mode="popLayout">
                                                 {displayedMessages.map((message, index) => {
-                                                    const isCurrentUser = currentUser && message.sender === currentUser;
+                                                    const isCurrentUser = (Boolean(authUid) && message.uid === authUid) || (currentUser && message.sender === currentUser);
                                                     const isMatch = highlightedIds.includes(message.id);
                                                     const showDateChip = shouldRenderDateChip(displayedMessages, index);
 
@@ -1245,10 +2360,12 @@ function App() {
                                                             <ChatBubble
                                                                 message={message}
                                                                 isCurrentUser={isCurrentUser}
+                                                                currentUser={currentUser}
                                                                 avatar={avatars[message.sender] || defaultAvatarMap[message.sender]}
                                                                 query={search}
                                                                 isMatch={isMatch || activeSearchId === message.id}
                                                                 animateEntry={replayMode}
+                                                                onAddReaction={handleAddReaction}
                                                                 onReplayFrom={() => {
                                                                     const nextIndex = Math.max(sourceIndex, 0);
                                                                     setReplaySegment('from-here');
@@ -1285,9 +2402,28 @@ function App() {
                     </div>
                 </main>
 
+                <LiveComposer
+                    messageValue={draftMessage}
+                    onMessageChange={handleLiveDraftChange}
+                    onSendMessage={handleSendLiveMessage}
+                    typingText={typingIndicatorText}
+                    disabled={!draftMessage.trim() || !firebaseReady}
+                    isSending={isSending}
+                    isFirebaseReady={firebaseReady}
+                    isLoading={liveLoading}
+                    encryptedLabel="🔒 Encrypted chat"
+                    chatBackground={activeChatBackground}
+                />
+
                 {error ? (
                     <p className="mt-1.5 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-[var(--error-text)] shadow-sm">
                         {error}
+                    </p>
+                ) : null}
+
+                {firebaseError ? (
+                    <p className="mt-1.5 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-100 shadow-sm">
+                        {firebaseError}
                     </p>
                 ) : null}
 
@@ -1372,7 +2508,7 @@ function App() {
                                     themePreference={themePreference}
                                     onThemeChange={handleThemeChange}
                                     chatMode={chatMode}
-                                    onChatModeChange={setChatMode}
+                                    onChatModeChange={(nextMode) => dispatch(setChatMode(nextMode))}
                                     users={users}
                                     currentUser={currentUser}
                                     onCurrentUserChange={setCurrentUser}
