@@ -1,6 +1,7 @@
 import {
     addDoc,
     collection,
+    deleteDoc,
     deleteField,
     doc,
     getDocs,
@@ -45,6 +46,46 @@ function roomTypingRef(roomId) {
 
 function roomUsersRef(roomId) {
     return collection(db, 'rooms', sanitizeRoomId(roomId), 'users');
+}
+
+async function deleteSnapshotDocs(snapshot) {
+    if (!snapshot?.docs?.length) {
+        return 0;
+    }
+
+    let batch = writeBatch(db);
+    let pendingWrites = 0;
+    let deletedCount = 0;
+
+    for (const entry of snapshot.docs) {
+        batch.delete(entry.ref);
+        pendingWrites += 1;
+        deletedCount += 1;
+
+        if (pendingWrites >= 450) {
+            await batch.commit();
+            batch = writeBatch(db);
+            pendingWrites = 0;
+        }
+    }
+
+    if (pendingWrites > 0) {
+        await batch.commit();
+    }
+
+    return deletedCount;
+}
+
+async function deleteRefsInParallel(docRefs, chunkSize = 200) {
+    let deletedCount = 0;
+
+    for (let startIndex = 0; startIndex < docRefs.length; startIndex += chunkSize) {
+        const currentChunk = docRefs.slice(startIndex, startIndex + chunkSize);
+        await Promise.all(currentChunk.map((ref) => deleteDoc(ref)));
+        deletedCount += currentChunk.length;
+    }
+
+    return deletedCount;
 }
 
 export function subscribeToRoomMessages(roomId, onNext, onError) {
@@ -104,6 +145,19 @@ export async function fetchOlderRoomMessages(roomId, cursor, pageSize = MESSAGE_
         oldestCursor: snapshot.docs[snapshot.docs.length - 1] || cursor,
         hasMore: snapshot.size >= pageSize
     };
+}
+
+export async function clearRoomMessages(roomId) {
+    ensureDb();
+
+    const messagesSnapshot = await getDocs(roomMessagesRef(roomId));
+    const messageRefs = messagesSnapshot.docs.map((entry) => entry.ref);
+
+    if (!messageRefs.length) {
+        return 0;
+    }
+
+    return deleteRefsInParallel(messageRefs);
 }
 
 export async function sendRoomMessage(roomId, payload) {
@@ -290,6 +344,28 @@ export async function scrubLegacyRoomMetadata(roomId) {
 
     await commitIfNeeded(true);
     return mutationCount;
+}
+
+export async function hardDeleteRoomData(roomId) {
+    ensureDb();
+
+    const safeRoomId = sanitizeRoomId(roomId);
+    const [messagesSnapshot, typingSnapshot, usersSnapshot] = await Promise.all([
+        getDocs(roomMessagesRef(safeRoomId)),
+        getDocs(roomTypingRef(safeRoomId)),
+        getDocs(roomUsersRef(safeRoomId))
+    ]);
+
+    let deletedCount = 0;
+    deletedCount += await deleteSnapshotDocs(messagesSnapshot);
+    deletedCount += await deleteSnapshotDocs(typingSnapshot);
+    deletedCount += await deleteSnapshotDocs(usersSnapshot);
+
+    await deleteDoc(doc(db, 'rooms', safeRoomId)).catch(() => {
+        // Parent room doc may not exist; data removal still succeeds.
+    });
+
+    return deletedCount;
 }
 
 export async function addMessageReaction(roomId, messageId, emoji) {
