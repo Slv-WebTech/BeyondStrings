@@ -18,7 +18,9 @@ import { Card, CardContent } from './components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './components/ui/sheet';
 import {
     addMessageReaction,
+    clearRoomMessages,
     fetchOlderRoomMessages,
+    hardDeleteRoomData,
     markMessageDelivered,
     markMessageRead,
     scrubLegacyRoomMetadata,
@@ -560,6 +562,9 @@ function App() {
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
     const [parseProgress, setParseProgress] = useState(0);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [isClearingChat, setIsClearingChat] = useState(false);
+    const [isDeletingChatData, setIsDeletingChatData] = useState(false);
     const [visibleMessages, setVisibleMessages] = useState([]);
     const [isPlaying, setIsPlaying] = useState(false);
     const [speed, setSpeed] = useState(500);
@@ -603,6 +608,7 @@ function App() {
     const hasExplicitRoomRef = useRef(Boolean(new URLSearchParams(window.location.search).get('room') || persistedRoomId));
     const deliveredMarkedRef = useRef(new Set());
     const readMarkedRef = useRef(new Set());
+    const roomDataClearedRef = useRef(false);
 
     const authSecret = authSession?.secret || '';
     const isLoggedIn = Boolean(authSession?.displayName && authSession?.secret);
@@ -1101,6 +1107,10 @@ function App() {
         }
 
         const markPresence = async (online, { force = false } = {}) => {
+            if (roomDataClearedRef.current) {
+                return;
+            }
+
             const nowMs = Date.now();
             const sameState = presenceOnlineRef.current === online;
 
@@ -1156,7 +1166,9 @@ function App() {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            markPresence(false, { force: true });
+            if (!roomDataClearedRef.current) {
+                markPresence(false, { force: true });
+            }
         };
     }, [firebaseReady, roomId, userId, currentUser, authSession?.displayName, isLoggedIn, encryptedCurrentUserName]);
 
@@ -1170,6 +1182,10 @@ function App() {
         }
 
         return () => {
+            if (roomDataClearedRef.current) {
+                return;
+            }
+
             setTypingStatus(roomId, userId, false, encryptedCurrentUserName).catch(() => {
                 // Avoid surfacing cleanup errors to users.
             });
@@ -1753,6 +1769,8 @@ function App() {
     };
 
     const handleLogout = async () => {
+        roomDataClearedRef.current = false;
+
         if (firebaseReady && isLoggedIn) {
             await Promise.allSettled([
                 setTypingStatus(roomId, userId, false, encryptedCurrentUserName),
@@ -1817,7 +1835,7 @@ function App() {
     const handleLiveDraftChange = (nextValue) => {
         setDraftMessage(nextValue);
 
-        if (!firebaseReady || !userId) {
+        if (!firebaseReady || !userId || roomDataClearedRef.current) {
             return;
         }
 
@@ -1890,8 +1908,10 @@ function App() {
             return;
         }
 
+        roomDataClearedRef.current = false;
         setIsSending(true);
         setFirebaseError('');
+        setStatusMessage('');
         try {
             const encryptedText = encryptMessage(safeText, authSecret);
             await sendRoomMessage(roomId, {
@@ -1903,11 +1923,133 @@ function App() {
                 cipherVersion: 'aes-v1'
             });
             setDraftMessage('');
-            await setTypingStatus(roomId, userId, false, encryptedCurrentUserName);
+            await Promise.allSettled([
+                setTypingStatus(roomId, userId, false, encryptedCurrentUserName),
+                setRoomUserPresence(roomId, userId, true, encryptedCurrentUserName)
+            ]);
         } catch (sendError) {
             setFirebaseError(sendError?.message || 'Unable to send message.');
         } finally {
             setIsSending(false);
+        }
+    };
+
+    const handleClearChat = async () => {
+        if (!firebaseReady) {
+            setFirebaseError('Firebase config is missing. Add VITE_FIREBASE_* values.');
+            return;
+        }
+
+        if (!authUid) {
+            setFirebaseError('Anonymous auth not ready yet. Please wait.');
+            return;
+        }
+
+        if (isClearingChat || isDeletingChatData) {
+            return;
+        }
+
+        const confirmed = window.confirm('Are you sure you want to clear all messages?');
+        if (!confirmed) {
+            return;
+        }
+
+        setIsClearingChat(true);
+        setFirebaseError('');
+        setStatusMessage('');
+
+        try {
+            isTypingFirestoreRef.current = false;
+
+            if (typingTimeoutRef.current) {
+                window.clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
+
+            await setTypingStatus(roomId, userId, false, encryptedCurrentUserName).catch(() => {
+                // Continue clearing messages even if typing cleanup fails.
+            });
+
+            await clearRoomMessages(roomId);
+
+            deliveredMarkedRef.current.clear();
+            readMarkedRef.current.clear();
+            knownLiveMessageIdsRef.current.clear();
+            initialLiveSnapshotLoadedRef.current = false;
+            setMessages([]);
+            setDraftMessage('');
+            setSearch('');
+            setSummary('');
+            setError('');
+            setShowInsights(false);
+            resetRoomTimelineState();
+            setStatusMessage('Chat cleared successfully. No messages yet.');
+        } catch (clearError) {
+            setFirebaseError(clearError?.message || 'Unable to clear chat messages.');
+        } finally {
+            setIsClearingChat(false);
+        }
+    };
+
+    const handleDeleteChatData = async () => {
+        if (!firebaseReady) {
+            setFirebaseError('Firebase config is missing. Add VITE_FIREBASE_* values.');
+            return;
+        }
+
+        if (isDeletingChatData) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            'Delete all current room chat data from Firebase permanently? This removes messages, typing, and presence data and cannot be undone.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setIsDeletingChatData(true);
+        setFirebaseError('');
+        setStatusMessage('');
+
+        try {
+            roomDataClearedRef.current = true;
+            isTypingFirestoreRef.current = false;
+
+            if (typingTimeoutRef.current) {
+                window.clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
+
+            await Promise.allSettled([
+                setTypingStatus(roomId, userId, false, encryptedCurrentUserName),
+                setRoomUserPresence(roomId, userId, false, encryptedCurrentUserName)
+            ]);
+
+            await hardDeleteRoomData(roomId);
+
+            deliveredMarkedRef.current.clear();
+            readMarkedRef.current.clear();
+            knownLiveMessageIdsRef.current.clear();
+            initialLiveSnapshotLoadedRef.current = false;
+            setMessages([]);
+            setUsers([]);
+            setTypingUsers({});
+            setPresenceUsers({});
+            setDraftMessage('');
+            setSearch('');
+            setSummary('');
+            setError('');
+            setShowInsights(false);
+            resetRoomTimelineState();
+            setStatusMessage('Chat room data deleted permanently from Firebase.');
+            window.alert('Chat data deleted permanently from Firebase for this room.');
+        } catch (deleteError) {
+            roomDataClearedRef.current = false;
+            setFirebaseError(deleteError?.message || 'Unable to delete chat data from Firebase.');
+        } finally {
+            setIsDeletingChatData(false);
         }
     };
 
@@ -2263,13 +2405,17 @@ function App() {
                                                 <MessageCircleMore size={30} />
                                             </span>
                                             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                                                Start Here
+                                                {firebaseReady && isLoggedIn ? 'No Messages Yet' : 'Start Here'}
                                             </p>
                                             <h2 className="mt-2 text-xl font-bold text-[var(--text-main)]">
-                                                Bring your WhatsApp export into a refined full-screen chat workspace.
+                                                {firebaseReady && isLoggedIn
+                                                    ? 'No messages yet'
+                                                    : 'Bring your WhatsApp export into a refined full-screen chat workspace.'}
                                             </h2>
                                             <p className="mt-2 text-sm leading-5 text-[var(--text-muted)]">
-                                                Use the settings or more menu in the header to import files, customize visuals, and generate summaries.
+                                                {firebaseReady && isLoggedIn
+                                                    ? 'Send a new message to start the room again, or import a conversation from settings.'
+                                                    : 'Use the settings or more menu in the header to import files, customize visuals, and generate summaries.'}
                                             </p>
                                         </motion.div>
                                     </div>
@@ -2427,6 +2573,12 @@ function App() {
                     </p>
                 ) : null}
 
+                {statusMessage ? (
+                    <p className="mt-1.5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-100 shadow-sm">
+                        {statusMessage}
+                    </p>
+                ) : null}
+
                 <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
                     <SheetContent side="right" className="w-full max-w-[420px] p-3 md:p-4">
                         <SheetHeader>
@@ -2518,6 +2670,10 @@ function App() {
                                     backgroundOptions={PRESET_CHAT_BACKGROUNDS}
                                     onBackgroundPresetSelect={handleBackgroundPresetSelect}
                                     onExport={handleExport}
+                                    onClearChat={handleClearChat}
+                                    isClearingChat={isClearingChat}
+                                    onDeleteChatData={handleDeleteChatData}
+                                    isDeletingChatData={isDeletingChatData}
                                 />
                             ) : null}
                         </div>

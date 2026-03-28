@@ -1,8 +1,8 @@
 {
-  "name": "whatsapp-chat-ui",
+  "name": "vibe-chat-universe",
   "private": true,
   "version": "0.0.0",
-  "description": "WhatsApp Chat Viewer built with React + Tailwind + Vite",
+  "description": "Vibe Chat Universe built with React + Tailwind + Vite",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,8 @@
   "keywords": [
     "react",
     "tailwind",
-    "whatsapp",
-    "chat-viewer"
+    "vibe-chat",
+    "chat-universe"
   ],
   "author": "",
   "license": "MIT",

@@ -2,7 +2,7 @@
 
 ## 🤖 AI Features Overview
 
-Your WhatsApp Chat UI includes **AI-powered conversation summarization** with intelligent fallback mechanisms.
+Vibe Chat Universe includes **AI-powered conversation summarization** with intelligent fallback mechanisms.
 
 ---
 

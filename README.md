@@ -1,267 +1,390 @@
-# WhatsApp Chat UI
+# 🚀 Vibe Chat Universe
 
-A dynamic, advanced WhatsApp-style chat interface built with React, featuring multiple chat modes, comprehensive theme customization, and robust edge case handling.
+> A premium, AI-assisted real-time chat application combining secure messaging, live presence, replay, analytics, and polished storytelling visuals — built with React + Firebase.
 
-## ✨ Features
+---
 
-### Chat Modes
+## ✨ Live Demo
 
-- **Formal Mode**: Professional conversations with neutral, work-appropriate styling
-- **Romantic Mode**: Intimate conversations with warm, love-focused visual elements
+🔗 https://slv-webtech.github.io/whatsapp-chats/
 
-### Theme Customization
+---
 
-- 🌞 **Light Theme**: Bright, clean interface for daytime usage
-- 🌙 **Dark Theme**: Eye-friendly interface for low-light environments
-- 🖥️ **System Auto**: Automatically adapts to device color scheme preference
+## 📸 Preview
 
-### Background Personalization
+These preview slots are wired to stable local paths. Replace the SVG placeholders in `screenshots/` with real captures anytime without changing this README.
 
-- **24+ Curated Background Presets**
-  - 11 Romantic-themed backgrounds (soft bokeh, skylines, love themes)
-  - 13 Formal-themed backgrounds (nature, minimalist, professional designs)
-  - Mode-specific filtering (formal backgrounds only show in formal mode, etc.)
-- **Custom Upload**: Upload your own background images
-- **Light/Dark Variants**: Appropriate background choices for each theme
+### Login Screen
 
-### Advanced Chat Features
+![Login Screen](./screenshots/login-screen.svg)
 
-- ⏱️ **Chat Replay**: Re-watch conversations with timeline control
-- 🎚️ **Zoom Levels**: 5 preset zoom levels (75% to 150%)
-- ⚡ **Playback Speed**: Adjustable replay speed (0.5x to 2x)
-- 👥 **Multiple Participants**: Support for multiple users with custom avatars
-- 📤 **Chat Export**: Export conversations in supported formats
-- 🎨 **Avatar Customization**: Upload custom profile images per user
+### Live Chat
 
-### Robustness & Reliability
+![Live Chat](./screenshots/live-chat.svg)
 
-- **100+ Edge Case Handlers**: Comprehensive error handling for all scenarios
-- **Defensive Programming**: Input validation, null-safety checks, graceful degradation
-- **Performance Optimizations**: Memoization, lazy loading, efficient rendering
-- **Sanitization**: XSS protection and input sanitization
-- **Advanced Testing**: Edge case test suite with 50+ test scenarios
+### Replay Mode
 
-## 🚀 Quick Start
+![Replay Mode](./screenshots/replay-mode.svg)
 
-### Installation
+### Chat Insights
+
+![Chat Insights](./screenshots/chat-insights.svg)
+
+---
+
+## 🔥 Features
+
+### 💬 Real-Time Chat
+
+- ⚡ Instant messaging with Firebase Firestore
+- 🔄 Live message sync without refresh
+- 🧑‍🤝‍🧑 Shared-room experience using a common secret
+- ✅ Delivered and read state tracking
+- 😀 Emoji reactions on messages
+
+---
+
+### 🔐 Secure Messaging
+
+- 🔑 Client-side AES encryption using CryptoJS
+- 🔒 Message content stored encrypted in Firestore
+- 🛡️ Shared-secret room access flow
+- 👤 Encrypted display-name metadata for presence, typing, and sender labels
+- 🧹 Legacy plaintext metadata scrub utility for old room records
+
+---
+
+### 🟢 Live Presence System
+
+- 🟢 Online / offline status
+- 🕒 Last seen tracking
+- ⌨️ Typing indicator with debounce protection
+- 🔄 Presence heartbeat updates for active sessions
+
+---
+
+### 🎨 Premium UI/UX
+
+- 💎 Premium full-screen messaging layout
+- 🌈 Dual chat modes: Formal and Romantic
+- 🌙 Light / Dark / System theme support
+- 🖼️ Curated wallpaper presets plus custom background upload
+- 📱 Responsive mobile-first composer and header controls
+- 🔔 Incoming notification sound with gesture unlock fallback
+
+---
+
+### 🎬 Chat Replay System
+
+- ⏯️ Replay conversations like a timeline
+- ⏩ Adjustable playback speed
+- 🎯 Jump to any point in the conversation
+- 🧭 Replay from a selected message
+
+---
+
+### 🧠 Chat Intelligence
+
+- 📊 Insights dashboard for conversation analysis
+- 🤖 AI-powered summarization support
+- 🧩 Local fallback summary flow when external AI is unavailable
+- ❌ In-view close action for returning from analysis back to chat
+
+---
+
+### 🔍 Search & Navigation
+
+- 🔎 Keyword search with match highlighting
+- ⬆️⬇️ Next / previous result navigation
+- 📍 Scroll-to-match behavior in long chats
+- 🗂️ Virtualized rendering for larger conversations
+
+---
+
+### 📤 Import / Export
+
+- 🖼️ Export the rendered chat as PNG
+- 📄 Parse exported WhatsApp chat files
+- 📁 Background and avatar upload support
+- 🗑️ Permanent Firebase room data deletion from Settings
+
+---
+
+### 📲 PWA & Installability
+
+- 📦 Web manifest included
+- 🧭 App icons and installable app metadata configured
+- ⚙️ Service worker included for install-ready deployment base
+
+---
+
+## 🛠️ Tech Stack
+
+| Tech               | Usage                            |
+| ------------------ | -------------------------------- |
+| React 18           | Frontend UI                      |
+| Vite               | Build tool and dev server        |
+| Tailwind CSS       | Styling system                   |
+| Firebase Auth      | Anonymous authentication         |
+| Firebase Firestore | Real-time database               |
+| Redux Toolkit      | Session and app state            |
+| redux-persist      | Persisted session storage        |
+| CryptoJS           | AES encryption                   |
+| Framer Motion      | Animations                       |
+| react-virtuoso     | Virtualized large chat rendering |
+| html-to-image      | PNG export                       |
+
+---
+
+## 🌟 Highlights
+
+- 🔥 Frontend-first architecture with Firebase backend services
+- 🔐 Encrypted chat content plus encrypted identity metadata
+- ⚡ Handles long conversations efficiently with virtualization and replay controls
+- 💎 Premium UI with polished motion, wallpaper layering, and responsive controls
+- 🧠 Combines messaging, replay, insights, export, and AI summary in one app
+
+---
+
+## 📌 Use Cases
+
+- 💬 Private shared-secret messaging
+- 📊 Chat analysis and behavioral insights
+- 🎬 Conversation replay and storytelling demos
+- 🧪 UI/UX experimentation with premium messaging layouts
+- 📁 Viewing and exploring exported chat archives
+
+---
+
+## ⚙️ Setup Instructions
+
+### 1. Clone the Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/Slv-WebTech/whatsapp-chats.git
 cd whatsapp-chats
+```
 
-# Install dependencies
+---
+
+### 2. Install Dependencies
+
+```bash
 npm install
 ```
 
-### Development
+---
+
+### 3. Add Environment Variables
+
+Create `.env.local` and add:
+
+```env
+VITE_FIREBASE_API_KEY=your_key
+VITE_FIREBASE_AUTH_DOMAIN=your_domain
+VITE_FIREBASE_PROJECT_ID=your_project
+VITE_FIREBASE_STORAGE_BUCKET=your_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+
+# Optional AI settings
+VITE_OPENAI_API_KEY=your_openai_key
+VITE_OLLAMA_BASE_URL=http://127.0.0.1:11434
+VITE_OLLAMA_MODEL=llama3.2:3b
+
+# Optional custom notification sound URL
+VITE_MESSAGE_TONE_URL=
+```
+
+---
+
+### 4. Enable Firebase Services
+
+Firebase project requirements:
+
+- Enable **Anonymous Authentication**
+- Enable **Cloud Firestore**
+- Configure Firestore rules for authenticated access
+
+---
+
+### 5. Run the App
 
 ```bash
-# Start development server
 npm run dev
 ```
 
-The app will open at `http://localhost:1432/`
+---
 
-### Production Build
+### 6. Build for Production
 
 ```bash
-# Build for production
 npm run build
-
-# Preview production build
-npm run preview
 ```
+
+---
+
+## 🔐 Example Firestore Rules
+
+Use rules appropriate for your project. A simple authenticated setup looks like this:
+
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{roomId} {
+      allow read, write: if request.auth != null;
+
+      match /messages/{messageId} {
+        allow read, write, delete: if request.auth != null;
+      }
+
+      match /typing/{typingId} {
+        allow read, write, delete: if request.auth != null;
+      }
+
+      match /users/{userId} {
+        allow read, write, delete: if request.auth != null;
+      }
+    }
+  }
+}
+```
+
+Note:
+
+- The hard-delete setting requires delete permission for room subcollections.
+
+---
+
+## 🧭 Core Product Flows
+
+### Shared-Secret Login
+
+Users enter:
+
+- Display name
+- Common room password
+
+The app derives a shared room id from the secret and joins the same live conversation.
+
+### Live Messaging
+
+- Messages are encrypted before writing to Firestore
+- Other participants receive live updates instantly
+- Delivery and read state update automatically
+
+### Insights & Summary
+
+- Open chat analysis from the header menu
+- View conversation insights
+- Return to chat with the in-view close button
+
+### Danger Zone Delete
+
+From Settings, a user can permanently remove current-room Firebase data:
+
+- messages
+- typing docs
+- presence docs
+- room parent document when available
+
+This is a real delete, not a soft clear.
+
+---
 
 ## 📁 Project Structure
 
-```
+```text
 src/
-├── App.js                          # Main app shell, state management
-├── App.css                         # Global styles, theme variables
+├── App.js
+├── main.js
+├── index.css
 ├── components/
-│   ├── ChatWindow.js              # Chat display and message rendering
-│   ├── ReplayControls.js          # Replay timeline with zoom & speed
-│   ├── SettingsPanel.js           # Appearance, participants, export settings
-│   ├── ChatHeader.js              # Chat header with contact info
-│   ├── ChatBubble.js              # Individual message component
-│   ├── FileUpload.js              # File import functionality
-│   └── ui/                        # Reusable UI components (buttons, cards, etc.)
-├── utils/
-│   ├── parser.js                  # Chat file parsing with validation
-│   ├── validators.js              # Input validation utilities
-│   ├── errorHandling.js           # Error recovery and logging
-│   ├── performance.js             # Performance monitoring & optimization
-│   ├── sanitization.js            # XSS protection & data sanitization
-│   ├── testEdgeCases.js           # Edge case testing utilities
-│   └── [6 more utility modules]   # Additional utilities
-└── index.css                       # Base styles
+│   ├── ChatBubble.js
+│   ├── ChatHeader.js
+│   ├── ChatInsights.js
+│   ├── FileUpload.js
+│   ├── LiveComposer.js
+│   ├── ReplayControls.js
+│   ├── SecretLogin.js
+│   ├── SettingsPanel.js
+│   └── ui/
+├── firebase/
+│   ├── chatService.js
+│   └── config.js
+├── store/
+│   ├── appSessionSlice.js
+│   └── store.js
+└── utils/
+    ├── aiSummary.js
+    ├── encryption.js
+    ├── groupMessages.js
+    ├── highlight.js
+    └── parser.js
 ```
 
-## 🎨 Customization
+---
 
-### Chat Modes
+## 🚀 Deployment
 
-Toggle between Formal and Romantic modes in **Settings → Appearance**:
+Production build is deployed to GitHub Pages:
 
-- Formal mode adapts colors and styling for professional conversations
-- Romantic mode applies warm tones and love-focused visual elements
+🔗 https://slv-webtech.github.io/whatsapp-chats/
 
-### Theme Selection
+If you deploy under another base path, ensure Vite base/public asset paths remain aligned.
 
-Choose your preferred theme in **Settings → Appearance**:
+---
 
-- **Light**: Bright interface (light backgrounds visible in this mode)
-- **Dark**: Dark interface (dark backgrounds visible in this mode)
-- **Auto**: Follows your system's color scheme preference
+## 🧪 Manual Test Checklist
 
-### Background Presets
+Use this after deployment:
 
-Background presets are automatically filtered by:
+- Send and receive realtime messages between two sessions
+- Verify delivered and read ticks update
+- Tap once, then verify incoming notification sound plays
+- Confirm shared-secret login lands both users in the same room
+- Open insights, then close with the `X` button
+- Check mobile composer icon sizing and wallpaper layering
+- Delete current-room chat data from Settings and verify Firebase data is gone
 
-1. **Chat Mode**: Formal backgrounds only show in formal mode; romantic in romantic mode
-2. **Theme**: Light backgrounds visible only in light theme; dark in dark theme
+---
 
-Example background categories:
+## 🔮 Future Improvements
 
-- **Romantic Light**: Romantic Skyline, Soft Love Bokeh, Pink Hearts Glow
-- **Romantic Dark**: Deep Love Night, Dark Rose Neon, Romantic Night 4K
-- **Formal Light**: Forest Nature, Serene Nature, Brand Flowers, Aesthetic HD
-- **Formal Dark**: Anime Moon Landscape, Minimalist Design, Minimalism 4K, Night Ocean
+- 📞 Voice / video calling
+- 🌐 Multi-room management UI
+- 🤖 Richer AI insight cards and timeline summaries
+- 📎 Better media attachment support
+- 🔐 Stronger key exchange model beyond shared-secret entry
 
-### Participants & Avatars
+---
 
-In **Settings → Participants**:
+## 👨‍💻 Author
 
-1. Add multiple chat participants
-2. Upload custom avatar images per participant
-3. Select a participant to highlight their messages
+**Vivek Sharma**  
+Full Stack Developer
 
-### Export
+---
 
-Save conversations using **Settings → Export** for sharing or archival.
+## ⭐ Show Some Love
 
-## 🛡️ Advanced Features
+If you like this project:
 
-### Edge Case Handling
+- ⭐ Star the repo
+- 🍴 Fork it
+- 📢 Share it
 
-The application includes comprehensive edge case handlers for:
+---
 
-- **Input Validation**: Empty strings, null values, malformed data
-- **Performance**: Large chat histories, rapid message parsing, memory optimization
-- **Error Recovery**: Graceful degradation when resources fail
-- **XSS Protection**: Sanitized user input, escaped HTML content
-- **Timezone Handling**: Accurate date/time parsing and display
+## 📄 License
 
-### Performance
-
-- Memoized component renders reduce unnecessary re-renders
-- Lazy-loaded chat history for large conversations
-- Optimized CSS with CSS custom properties for efficient theming
-- Debounced event handlers for frequently-fired events
-
-### Testing
-
-Test edge cases manually:
-
-1. Upload corrupted chat exports
-2. Try extreme zoom levels (75% to 150%)
-3. Test with 500+ messages
-4. Test with special characters in names
-5. Rapid theme/mode switching
-6. Upload oversized images for avatars/backgrounds
-
-## 🎯 Built With
-
-- **React 18+** - UI framework with hooks
-- **Framer Motion** - Smooth animations and transitions
-- **Tailwind CSS** - Utility-first styling
-- **Vite** - Lightning-fast build tool
-- **Lucide Icons** - Beautiful icon library
-- **CSS Custom Properties** - Dynamic theming system
-
-## 🔒 Security
-
-- Input sanitization to prevent XSS attacks
-- Safe HTML rendering with React's built-in escaping
-- Validated file uploads (size and type checks)
-- Error boundaries for graceful error handling
-- Optional AI summarization via OpenAI when configured; local summary fallback works without external API
-
-## 🎮 Usage Examples
-
-### Starting a Formal Chat
-
-1. Open **Settings**
-2. Select **Chat Mode → Formal**
-3. Choose a Formal background from Light or Dark presets
-4. Add participants and customize avatars
-
-### Creating a Romantic Message Thread
-
-1. Select **Chat Mode → Romantic**
-2. Pick a Romantic background preset
-3. Set theme to your preference
-4. Add participants
-
-### Replaying a Conversation
-
-1. Import a chat file (supported formats)
-2. Use the timeline at the bottom to seek
-3. Adjust zoom (75% to 150%) for readability
-4. Control playback speed (0.5x to 2x)
-5. Use pause/play controls
-
-## 📝 API Reference
-
-### Main State Management (App.js)
-
-```javascript
-// Chat Mode
-const [chatMode, setChatMode] = useState("romantic"); // 'formal' | 'romantic'
-
-// Theme Preference
-const [themePreference, setThemePreference] = useState("system"); // 'light' | 'dark' | 'system'
-
-// Background
-const [chatBackground, setChatBackground] = useState("");
-
-// Participants & Messages
-const [participants, setParticipants] = useState([]);
-const [messages, setMessages] = useState([]);
-```
-
-### Component Props
-
-**SettingsPanel** - Configuration interface
-
-```javascript
-<SettingsPanel
-  section="appearance"            // 'appearance' | 'participants' | 'export'
-  theme="dark"                    // Current resolved theme
-  themePreference="dark"          // User preference
-  onThemeChange={handler}         // Theme change handler
-  chatMode="romantic"             // Current chat mode
-  onChatModeChange={handler}      // Chat mode change handler
-  chatBackground=""               // Current background URL
-  backgroundOptions={[...]}       // 24+ preset backgrounds
-  onBackgroundPresetSelect={handler}  // Background selection handler
+MIT License
+isReplaying={false} // Playback state
+currentMessageIndex={0}
+onMessageIndexChange={handler}
 />
-```
 
-**ReplayControls** - Conversation playback
-
-```javascript
-<ReplayControls
-  messages={[...]}                // Chat messages
-  speed={1}                       // Playback speed (0.5 to 2)
-  onSpeedChange={handler}
-  zoomLevel={100}                 // Zoom percentage
-  onZoomChange={handler}
-  isReplaying={false}             // Playback state
-  currentMessageIndex={0}
-  onMessageIndexChange={handler}
-/>
 ```
 
 ## 🐛 Troubleshooting
@@ -327,5 +450,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 **Made with ❤️ for seamless, customizable chat experiences**
 
-**Live Demo**: https://slv-webtech.github.io/whatsapp-chats/  
+**Live Demo**: https://slv-webtech.github.io/whatsapp-chats/
 **GitHub**: https://github.com/Slv-WebTech/whatsapp-chats
+```

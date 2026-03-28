@@ -1,4 +1,4 @@
-import { Heart, ImagePlus, Laptop, MoonStar, Sparkles, SunMedium, UserCircle2 } from 'lucide-react';
+import { Heart, ImagePlus, Laptop, MoonStar, Sparkles, SunMedium, Trash2, UserCircle2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
@@ -19,7 +19,11 @@ function SettingsPanel({
     selectedBackground,
     backgroundOptions = [],
     onBackgroundPresetSelect,
-    onExport
+    onExport,
+    onClearChat,
+    isClearingChat = false,
+    onDeleteChatData,
+    isDeletingChatData = false
 }) {
     const isAppearance = section === 'appearance';
     const isParticipants = section === 'participants';
@@ -218,6 +222,43 @@ function SettingsPanel({
                         <Button type="button" variant="secondary" onClick={onExport} className="mt-3 w-full">
                             Export Chat as PNG
                         </Button>
+
+                        <div className="mt-4 rounded-[1.2rem] border border-amber-400/25 bg-amber-500/8 p-3">
+                            <h4 className="text-sm font-semibold text-[var(--text-main)]">Clear Chat Room</h4>
+                            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                                Delete all messages in the current room while keeping the room itself available for fresh conversation.
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onClearChat}
+                                disabled={isClearingChat || isDeletingChatData}
+                                className="mt-3 w-full border-amber-400/35 bg-amber-500/10 text-[var(--text-main)] hover:bg-amber-500/18"
+                            >
+                                <Trash2 size={15} />
+                                {isClearingChat ? 'Clearing messages...' : 'Clear Chat'}
+                            </Button>
+                        </div>
+
+                        <div className="mt-5 rounded-[1.2rem] border border-red-400/25 bg-red-500/8 p-3">
+                            <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-red-200 dark:text-red-200">
+                                <Trash2 size={15} />
+                                Danger Zone
+                            </h4>
+                            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                                Permanently delete all messages, typing, and presence data for the current room from Firebase. This is a real delete and cannot be undone.
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onDeleteChatData}
+                                disabled={isDeletingChatData}
+                                className="mt-3 w-full border-red-400/35 bg-red-500/10 text-red-100 hover:bg-red-500/18"
+                            >
+                                <Trash2 size={15} />
+                                {isDeletingChatData ? 'Deleting chat permanently...' : 'Delete Chat Data from Firebase'}
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             ) : null}
