@@ -114,10 +114,13 @@ body {
 
 .chat-wallpaper {
     --chat-bg-position: center center;
+    --chat-photo-size: cover;
+    --chat-photo-position: center center;
     background-color: var(--wallpaper-base);
     background-image: var(--wallpaper-overlay), var(--wallpaper-pattern), linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-    background-size: 140px 140px;
-    background-position: var(--chat-bg-position);
+    background-size: var(--chat-photo-size), 140px 140px, cover;
+    background-position: var(--chat-photo-position), center center, center center;
+    background-repeat: no-repeat, repeat, no-repeat;
     scroll-behavior: smooth;
 }
 
@@ -653,8 +656,8 @@ body {
 
 @media (max-width: 640px) {
     .chat-wallpaper {
-        --chat-bg-position: center 24%;
-        background-size: cover;
+        --chat-photo-size: contain;
+        --chat-photo-position: center top;
     }
 
     .timeline-chip-toggle span {
