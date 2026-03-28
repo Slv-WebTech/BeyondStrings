@@ -41,9 +41,10 @@ function LiveComposer({ messageValue, onMessageChange, onSendMessage, typingText
         <div
             className="sticky bottom-0 relative border-t border-[var(--border-soft)] bg-white/34 px-2.5 py-1.5 shadow-[0_-8px_22px_rgba(15,23,42,0.04)] backdrop-blur-md dark:bg-slate-950/30 md:px-5 md:py-2"
             style={{
-                backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02)), url(${chatBackground || ''}), var(--wallpaper-pattern), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))`,
-                backgroundSize: 'cover, cover, 140px 140px, cover',
-                backgroundPosition: 'center bottom, center bottom, center center, center center'
+                backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02)), url(${chatBackground || ''}), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))`,
+                backgroundSize: 'cover, cover, cover',
+                backgroundPosition: 'center bottom, center bottom, center center',
+                backgroundRepeat: 'no-repeat, no-repeat, no-repeat'
             }}
         >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-black/12 to-transparent dark:from-white/8" />
@@ -85,11 +86,11 @@ function LiveComposer({ messageValue, onMessageChange, onSendMessage, typingText
 
                 <div className="mb-0.5 min-h-4 pl-1 md:mb-1">
                     {typingText ? (
-                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-slate-950/42 px-2 py-0.5 text-[11px] text-white shadow-sm backdrop-blur dark:border-slate-300/25 dark:bg-white/14 dark:text-slate-100">
                             <span className="inline-flex items-center gap-[3px]">
-                                <span className="typing-bubble-dot" />
-                                <span className="typing-bubble-dot" />
-                                <span className="typing-bubble-dot" />
+                                <span className="typing-bubble-dot" style={{ backgroundColor: 'currentColor' }} />
+                                <span className="typing-bubble-dot" style={{ backgroundColor: 'currentColor' }} />
+                                <span className="typing-bubble-dot" style={{ backgroundColor: 'currentColor' }} />
                             </span>
                             <span>{typingText}</span>
                         </span>
