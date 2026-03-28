@@ -39,14 +39,17 @@ function LiveComposer({ messageValue, onMessageChange, onSendMessage, typingText
 
     return (
         <div
-            className="sticky bottom-0 relative border-t border-white/22 bg-white/12 px-2.5 pb-[calc(0.45rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.16)] backdrop-blur-xl dark:border-slate-300/14 dark:bg-slate-950/18 md:px-5 md:py-2"
+            className="sticky bottom-0 relative border-t border-white/20 bg-transparent px-2.5 pb-[calc(0.45rem+env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-10px_26px_rgba(15,23,42,0.14)] backdrop-blur-md dark:border-slate-300/12 md:px-5 md:py-2"
             style={{
-                backgroundImage: 'linear-gradient(180deg, rgba(8,15,28,0.22), rgba(8,15,28,0.08)), linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))',
-                backgroundPosition: 'center bottom, center center',
-                backgroundRepeat: 'no-repeat, no-repeat'
+                backgroundImage: chatBackground
+                    ? `linear-gradient(180deg, rgba(8,15,28,0.22), rgba(8,15,28,0.1)), linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)), url(${chatBackground})`
+                    : 'linear-gradient(180deg, rgba(8,15,28,0.22), rgba(8,15,28,0.1)), linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+                backgroundPosition: 'center bottom, center center, center bottom',
+                backgroundRepeat: 'no-repeat, no-repeat, no-repeat',
+                backgroundSize: 'cover, cover, cover'
             }}
         >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/18 to-transparent dark:from-white/10" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/12 to-transparent dark:from-white/8" />
 
             <div className="relative z-10 mx-auto w-full max-w-4xl">
                 <div className="mb-1 flex items-center justify-between gap-1.5 text-[10px] text-slate-100 md:mb-1.5 md:gap-2 md:text-[11px]">
