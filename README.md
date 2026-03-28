@@ -1,4 +1,5 @@
-# 🚀 Vibe Chat Universe
+# 🚀 ConvoLens
+### *See Conversations Differently.*
 
 > A premium, AI-assisted real-time chat application combining secure messaging, live presence, replay, analytics, and polished storytelling visuals — built with React + Firebase.
 

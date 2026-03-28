@@ -2,7 +2,7 @@
 
 ## 🤖 AI Features Overview
 
-Vibe Chat Universe includes **AI-powered conversation summarization** with intelligent fallback mechanisms.
+ConvoLens includes **AI-powered conversation summarization** with intelligent fallback mechanisms.
 
 ---
 

@@ -29,7 +29,7 @@ function SecretLogin({ onLogin, errorMessage, theme = 'dark', onThemeChange, cha
     };
 
     return (
-        <div className="relative flex min-h-screen h-[100dvh] w-full items-center justify-center overflow-hidden px-4">
+        <div className="relative flex min-h-[100svh] h-[100svh] w-full items-center justify-center overflow-hidden px-4 md:min-h-screen md:h-[100dvh]">
             <motion.div
                 aria-hidden="true"
                 initial={{ opacity: 0.42, scale: 1.02 }}
@@ -86,8 +86,8 @@ function SecretLogin({ onLogin, errorMessage, theme = 'dark', onThemeChange, cha
                                     <ShieldCheck size={18} />
                                 </span>
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Private Access</p>
-                                    <h1 className="text-lg font-semibold text-[var(--text-main)]">Encrypted Chat</h1>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">ConvoLens</p>
+                                    <h1 className="text-lg font-semibold text-[var(--text-main)]">See Conversations Differently.</h1>
                                 </div>
                             </div>
 

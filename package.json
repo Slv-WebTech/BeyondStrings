@@ -1,8 +1,8 @@
 {
-  "name": "vibe-chat-universe",
+  "name": "convolens",
   "private": true,
   "version": "0.0.0",
-  "description": "Vibe Chat Universe built with React + Tailwind + Vite",
+  "description": "ConvoLens built with React + Tailwind + Vite",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,8 @@
   "keywords": [
     "react",
     "tailwind",
-    "vibe-chat",
-    "chat-universe"
+    "convolens",
+    "encrypted-chat"
   ],
   "author": "",
   "license": "MIT",

@@ -41,16 +41,22 @@ import { decryptMessage, encryptMessage } from './utils/encryption';
 import sampleChatText from './components/Assets/sample chat.txt?raw';
 import {
     clearAuthSession,
+    resetUserPreferences,
+    selectAvatarPreferences,
     selectAuthSession,
     selectChatMode,
+    selectCustomBackgroundUrl,
     selectCurrentUser,
     selectLastRoomId,
+    selectSelectedBackgroundId,
     selectThemePreference,
+    setBackgroundPreference,
     setAuthSession,
     setChatMode,
     setCurrentUser,
     setLastRoomId,
-    setThemePreference
+    setThemePreference,
+    setUserAvatar
 } from './store/appSessionSlice';
 import { persistor } from './store/store';
 
@@ -118,6 +124,48 @@ const PRESET_CHAT_BACKGROUNDS = [
         url: 'https://www.wallsnapy.com/img_gallery/romantic-love-4k-desktop-background-853.jpg'
     },
     {
+        id: 'romantic-aurora-1697',
+        label: 'Romantic Aurora',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://4kwallpapers.com/images/walls/thumbs_2t/1697.jpg'
+    },
+    {
+        id: 'love-couple-hands',
+        label: 'Love Couple Hands',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://4kwallpapers.com/images/wallpapers/love-couple-hands-3840x2160-14351.jpg'
+    },
+    {
+        id: 'couple-background-photo',
+        label: 'Couple Background Photo',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://wallpapercat.com/w/full/8/0/a/927551-3840x2160-desktop-4k-love-couple-background-photo.jpg'
+    },
+    {
+        id: 'soft-love-pinterest',
+        label: 'Soft Love Portrait',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://i.pinimg.com/474x/f1/9f/0e/f19f0e6c0842ecf3ad887f3883752b96.jpg'
+    },
+    {
+        id: 'bridge-end-couple',
+        label: 'Bridge End Couple',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://wallpapers.com/images/hd/aesthetic-couple-in-bridge-end-vgefqbhk54e1nq4m.jpg'
+    },
+    {
+        id: 'romantic-picture-756',
+        label: 'Romantic Picture 4K',
+        mode: 'light',
+        chatMode: 'romantic',
+        url: 'https://www.wallsnapy.com/img_gallery/romantic-love-4k-desktop-picture-756.jpg'
+    },
+    {
         id: 'deep-love-night',
         label: 'Deep Love Night',
         mode: 'dark',
@@ -125,11 +173,32 @@ const PRESET_CHAT_BACKGROUNDS = [
         url: 'https://wallpapercave.com/wp/wp6445768.jpg'
     },
     {
+        id: 'moody-pinterest-romance',
+        label: 'Moody Pinterest Romance',
+        mode: 'dark',
+        chatMode: 'romantic',
+        url: 'https://i.pinimg.com/736x/d1/db/4b/d1db4bc72fb5d2aa10bd5f94954cc3a7.jpg'
+    },
+    {
+        id: 'romantic-night-cave',
+        label: 'Romantic Night Cave',
+        mode: 'dark',
+        chatMode: 'romantic',
+        url: 'https://wallpapercave.com/wp/wp5543425.jpg'
+    },
+    {
         id: 'dark-rose-neon',
         label: 'Dark Rose Neon',
         mode: 'dark',
         chatMode: 'romantic',
         url: 'https://images.hdqwalls.com/wallpapers/bthumb/only-you-6c.jpg'
+    },
+    {
+        id: 'romantic-afterglow-1699',
+        label: 'Romantic Afterglow',
+        mode: 'dark',
+        chatMode: 'romantic',
+        url: 'https://4kwallpapers.com/images/walls/thumbs_2t/1699.jpg'
     },
     {
         id: 'romantic-night-4k',
@@ -387,6 +456,27 @@ function getBackgroundThemeTokens(tone) {
     return tokens[tone] || tokens['formal-soft'];
 }
 
+function getEligiblePresetBackgrounds(chatMode, resolvedTheme) {
+    const exactMatches = PRESET_CHAT_BACKGROUNDS.filter(
+        (item) => item.chatMode === chatMode && item.mode === resolvedTheme
+    );
+
+    if (exactMatches.length) {
+        return exactMatches;
+    }
+
+    return PRESET_CHAT_BACKGROUNDS.filter((item) => item.chatMode === chatMode);
+}
+
+function pickRandomPresetBackgroundId(options) {
+    if (!options.length) {
+        return '';
+    }
+
+    const randomIndex = Math.floor(Math.random() * options.length);
+    return options[randomIndex]?.id || '';
+}
+
 function formatLastSeenLabel(value) {
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
         return '';
@@ -535,6 +625,9 @@ function App() {
     const themePreference = useSelector(selectThemePreference);
     const currentUser = useSelector(selectCurrentUser);
     const persistedRoomId = useSelector(selectLastRoomId);
+    const selectedBackgroundId = useSelector(selectSelectedBackgroundId);
+    const customBackgroundUrl = useSelector(selectCustomBackgroundUrl);
+    const avatars = useSelector(selectAvatarPreferences);
     const [authUid, setAuthUid] = useState('');
     const [authReady, setAuthReady] = useState(() => !firebaseReady);
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -544,8 +637,6 @@ function App() {
     const [error, setError] = useState('');
     const [authError, setAuthError] = useState('');
     const [firebaseError, setFirebaseError] = useState('');
-    const [avatars, setAvatars] = useState({});
-    const [chatBackground, setChatBackground] = useState('');
     const [search, setSearch] = useState('');
     const [roomId, setRoomId] = useState(() => {
         const fromUrl = new URLSearchParams(window.location.search).get('room');
@@ -581,6 +672,7 @@ function App() {
     const [showSearch, setShowSearch] = useState(false);
     const [showTimeline, setShowTimeline] = useState(false);
     const [showInsights, setShowInsights] = useState(false);
+    const [rotatingBackgroundId, setRotatingBackgroundId] = useState('');
     const shouldReduceMotion = useReducedMotion();
     const hasOpenAIKey = Boolean(import.meta.env.VITE_OPENAI_API_KEY?.trim());
 
@@ -839,23 +931,33 @@ function App() {
         return nextMap;
     }, [users]);
     const resolvedTheme = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
-    const selectedBackgroundPreset = useMemo(
-        () => PRESET_CHAT_BACKGROUNDS.find((item) => item.url === chatBackground) || null,
-        [chatBackground]
+    const eligiblePresetBackgrounds = useMemo(
+        () => getEligiblePresetBackgrounds(chatMode, resolvedTheme),
+        [chatMode, resolvedTheme]
     );
+    const selectedBackgroundPreset = useMemo(
+        () => PRESET_CHAT_BACKGROUNDS.find((item) => item.id === selectedBackgroundId) || null,
+        [selectedBackgroundId]
+    );
+    const rotatingBackgroundPreset = useMemo(
+        () => PRESET_CHAT_BACKGROUNDS.find((item) => item.id === rotatingBackgroundId) || null,
+        [rotatingBackgroundId]
+    );
+    const hasSavedBackgroundPreference = Boolean(selectedBackgroundId || customBackgroundUrl);
+    const wallpaperPreference = customBackgroundUrl || selectedBackgroundPreset?.url || rotatingBackgroundPreset?.url || '';
     const backgroundTone = useMemo(
         () =>
             pickBackgroundTone({
                 chatMode,
                 resolvedTheme,
-                selectedBackground: chatBackground,
-                presetOption: selectedBackgroundPreset
+                selectedBackground: wallpaperPreference,
+                presetOption: selectedBackgroundPreset || rotatingBackgroundPreset
             }),
-        [chatMode, resolvedTheme, chatBackground, selectedBackgroundPreset]
+        [chatMode, resolvedTheme, wallpaperPreference, selectedBackgroundPreset, rotatingBackgroundPreset]
     );
     const backgroundTheme = useMemo(() => getBackgroundThemeTokens(backgroundTone), [backgroundTone]);
     const activeChatBackground =
-        chatBackground ||
+        wallpaperPreference ||
         DEFAULT_CHAT_BACKGROUND[chatMode]?.[resolvedTheme] ||
         DEFAULT_CHAT_BACKGROUND.formal.light;
 
@@ -876,6 +978,15 @@ function App() {
     useEffect(() => {
         document.documentElement.setAttribute('data-chat-mode', chatMode);
     }, [chatMode]);
+
+    useEffect(() => {
+        if (hasSavedBackgroundPreference) {
+            setRotatingBackgroundId('');
+            return;
+        }
+
+        setRotatingBackgroundId(pickRandomPresetBackgroundId(eligiblePresetBackgrounds));
+    }, [eligiblePresetBackgrounds, hasSavedBackgroundPreference]);
 
     useEffect(() => {
         if (!firebaseReady) {
@@ -1505,16 +1616,40 @@ function App() {
         [groupedMessages, contactName]
     );
     const contactMeta = useMemo(() => {
-        const livePresenceEntries = Object.entries(presenceUsers).filter(([uid]) => uid !== authUid);
+        const selfUid = String(authUid || '').trim();
+        const selfNames = new Set(
+            [currentUser, authSession?.displayName]
+                .map((value) => String(value || '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+
+        const livePresenceEntries = Object.entries(presenceUsers).filter(([uid, entry]) => {
+            const safeUid = String(uid || '').trim();
+            if (selfUid && safeUid === selfUid) {
+                return false;
+            }
+
+            const decodedName = (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)).trim().toLowerCase();
+            if (decodedName && selfNames.has(decodedName)) {
+                return false;
+            }
+
+            return true;
+        });
+
         const livePresence =
             livePresenceEntries.find(([uid, entry]) => (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)) === contactName)?.[1] ||
             livePresenceEntries.find(([uid, entry]) => (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)) === otherUser)?.[1] ||
             livePresenceEntries[0]?.[1] ||
             null;
         const liveOnlineEntries = livePresenceEntries.filter(([, entry]) => Boolean(entry?.online));
-        const onlineNames = liveOnlineEntries
-            .map(([uid, entry]) => decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid))
-            .filter(Boolean);
+        const onlineNames = Array.from(
+            new Set(
+                liveOnlineEntries
+                    .map(([uid, entry]) => (decryptDisplayNameSafely(entry?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)).trim())
+                    .filter(Boolean)
+            )
+        );
 
         if (!contactMessages.length && !livePresence) {
             return {
@@ -1537,9 +1672,11 @@ function App() {
         const isOnline = liveOnlineEntries.length > 0 || (liveOnline ?? diffMs <= 5 * 60 * 1000);
         let statusLine = 'Last seen recently';
 
-        if (liveOnlineEntries.length > 1) {
-            statusLine = `${liveOnlineEntries.length} users online`;
-        } else if (liveOnlineEntries.length === 1) {
+        if (onlineNames.length >= 3) {
+            statusLine = `${onlineNames[0]}, ${onlineNames[1]} and ${onlineNames.length - 2} other${onlineNames.length - 2 > 1 ? 's' : ''} are online`;
+        } else if (onlineNames.length === 2) {
+            statusLine = `${onlineNames[0]}, ${onlineNames[1]} are online`;
+        } else if (onlineNames.length === 1) {
             statusLine = `${onlineNames[0] || 'Someone'} is online`;
         } else {
             const formattedLastSeen = formatLastSeenLabel(effectiveLastSeen);
@@ -1553,11 +1690,28 @@ function App() {
             messageCount: contactMessages.length,
             activeDayCount: activeDays.size
         };
-    }, [contactMessages, presenceUsers, contactName, otherUser, authUid, authSecret]);
+    }, [contactMessages, presenceUsers, contactName, otherUser, authUid, authSecret, currentUser, authSession?.displayName]);
 
     const typingIndicatorText = useMemo(() => {
+        const selfNames = new Set(
+            [currentUser, authSession?.displayName]
+                .map((value) => String(value || '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+
         const liveTypingUsers = Object.entries(typingUsers)
-            .filter(([uid, value]) => uid !== authUid && Boolean(value?.isTyping))
+            .filter(([uid, value]) => {
+                if (!Boolean(value?.isTyping)) {
+                    return false;
+                }
+
+                if (uid === authUid) {
+                    return false;
+                }
+
+                const decodedName = (decryptDisplayNameSafely(value?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid)).trim().toLowerCase();
+                return !selfNames.has(decodedName);
+            })
             .map(([uid, value]) => decryptDisplayNameSafely(value?.encryptedDisplayName, authSecret) || pseudonymFromUid(uid));
 
         if (!liveTypingUsers.length) {
@@ -1573,7 +1727,7 @@ function App() {
         }
 
         return `${liveTypingUsers[0]}, ${liveTypingUsers[1]} and ${liveTypingUsers.length - 2} other${liveTypingUsers.length - 2 > 1 ? 's' : ''} are typing...`;
-    }, [typingUsers, authUid, authSecret]);
+    }, [typingUsers, authUid, authSecret, currentUser, authSession?.displayName]);
 
     const shouldRenderDateChip = (list, index) => {
         if (index === 0) {
@@ -2109,7 +2263,12 @@ function App() {
 
         const reader = new FileReader();
         reader.onload = () => {
-            setAvatars((prev) => ({ ...prev, [user]: String(reader.result || '') }));
+            dispatch(
+                setUserAvatar({
+                    user,
+                    avatarUrl: String(reader.result || '')
+                })
+            );
         };
         reader.readAsDataURL(file);
     };
@@ -2121,13 +2280,35 @@ function App() {
 
         const reader = new FileReader();
         reader.onload = () => {
-            setChatBackground(String(reader.result || ''));
+            dispatch(
+                setBackgroundPreference({
+                    presetId: '',
+                    customUrl: String(reader.result || '')
+                })
+            );
         };
         reader.readAsDataURL(file);
     };
 
-    const handleBackgroundPresetSelect = (url) => {
-        setChatBackground(url || '');
+    const handleBackgroundPresetSelect = (presetId) => {
+        dispatch(
+            setBackgroundPreference({
+                presetId: String(presetId || '').trim(),
+                customUrl: ''
+            })
+        );
+    };
+
+    const handleResetPreferences = () => {
+        const shouldReset = window.confirm(
+            'Reset all saved preferences (theme, mode, wallpaper, avatars, and selected user) to defaults?'
+        );
+
+        if (!shouldReset) {
+            return;
+        }
+
+        dispatch(resetUserPreferences());
     };
 
     const handleThemeChange = (nextTheme) => {
@@ -2280,7 +2461,7 @@ function App() {
 
     if (firebaseReady && !authReady) {
         return (
-            <div className="relative flex min-h-screen h-[100dvh] w-full items-center justify-center overflow-hidden px-4">
+            <div className="relative flex min-h-[100svh] h-[100svh] w-full items-center justify-center overflow-hidden px-4 md:min-h-screen md:h-[100dvh]">
                 <div className="hero-orb left-[-90px] top-[8%] h-56 w-56 bg-slate-300/30" />
                 <div className="hero-orb right-[-70px] top-[18%] h-72 w-72 bg-slate-400/25" />
                 <div className="glass-panel rounded-[1.2rem] px-6 py-4 text-sm text-[var(--text-main)]">Signing in anonymously...</div>
@@ -2289,7 +2470,7 @@ function App() {
     }
 
     return (
-        <div className="relative flex min-h-screen h-[100dvh] w-full flex-col overflow-hidden">
+        <div className="relative flex min-h-[100svh] h-[100svh] w-full flex-col overflow-hidden md:min-h-screen md:h-[100dvh]">
             <div className="hero-orb left-[-90px] top-[8%] h-56 w-56 bg-slate-300/30" />
             <div className="hero-orb right-[-70px] top-[18%] h-72 w-72 bg-slate-400/25" />
 
@@ -2363,8 +2544,8 @@ function App() {
                             onTouchEnd={handleThemeSwipeEnd}
                             style={{
                                 backgroundImage: `url(${activeChatBackground}), var(--wallpaper-pattern), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))`,
-                                backgroundSize: 'cover, 140px 140px, cover',
-                                backgroundPosition: 'center center, center center, center center',
+                                '--chat-photo-size': 'cover',
+                                '--chat-photo-position': 'center center',
                                 '--accent': backgroundTheme.accent,
                                 '--bubble-sent-start': backgroundTheme.sentStart,
                                 '--bubble-sent-end': backgroundTheme.sentEnd,
@@ -2700,12 +2881,14 @@ function App() {
                                     onChatModeChange={(nextMode) => dispatch(setChatMode(nextMode))}
                                     users={users}
                                     currentUser={currentUser}
-                                    onCurrentUserChange={setCurrentUser}
+                                    onCurrentUserChange={(nextUser) => dispatch(setCurrentUser(nextUser))}
                                     onAvatarUpload={handleAvatarUpload}
                                     onBackgroundUpload={handleBackgroundUpload}
-                                    selectedBackground={chatBackground}
+                                    selectedBackgroundId={selectedBackgroundId}
+                                    hasCustomBackground={Boolean(customBackgroundUrl)}
                                     backgroundOptions={PRESET_CHAT_BACKGROUNDS}
                                     onBackgroundPresetSelect={handleBackgroundPresetSelect}
+                                    onResetPreferences={handleResetPreferences}
                                     onExport={handleExport}
                                     onClearChat={handleClearChat}
                                     isClearingChat={isClearingChat}

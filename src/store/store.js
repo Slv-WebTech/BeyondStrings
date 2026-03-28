@@ -4,7 +4,35 @@ import { createTransform, FLUSH, PAUSE, PERSIST, persistReducer, persistStore, P
 import storage from 'redux-persist/lib/storage';
 import appSessionReducer from './appSessionSlice';
 
-const persistSecret = import.meta.env.VITE_REDUX_PERSIST_SECRET || 'whatsapp-chat-ui-persist';
+const persistSecret = import.meta.env.VITE_REDUX_PERSIST_SECRET || 'convolens-persist';
+let shouldPurgePersistedState = false;
+
+const isValidSessionState = (session) => {
+    if (!session || typeof session !== 'object' || Array.isArray(session)) {
+        return false;
+    }
+
+    const hasValidString = (value) => typeof value === 'string';
+    const hasValidAuthSession =
+        session.authSession === null ||
+        (typeof session.authSession === 'object' &&
+            session.authSession !== null &&
+            !Array.isArray(session.authSession) &&
+            hasValidString(session.authSession.displayName) &&
+            hasValidString(session.authSession.secret));
+    const hasValidAvatars = session.avatars && typeof session.avatars === 'object' && !Array.isArray(session.avatars);
+
+    return (
+        hasValidAuthSession &&
+        ['romantic', 'formal'].includes(session.chatMode) &&
+        ['light', 'dark', 'system'].includes(session.themePreference) &&
+        hasValidString(session.currentUser) &&
+        hasValidString(session.lastRoomId) &&
+        hasValidString(session.selectedBackgroundId) &&
+        hasValidString(session.customBackgroundUrl) &&
+        hasValidAvatars
+    );
+};
 
 const encryptedSessionTransform = createTransform(
     (inboundState) => {
@@ -16,13 +44,30 @@ const encryptedSessionTransform = createTransform(
     },
     (outboundState) => {
         if (typeof outboundState !== 'string') {
+            if (outboundState == null) {
+                return outboundState;
+            }
+
+            shouldPurgePersistedState = true;
             return outboundState;
         }
 
         try {
             const decrypted = CryptoJS.AES.decrypt(outboundState, persistSecret).toString(CryptoJS.enc.Utf8);
-            return decrypted ? JSON.parse(decrypted) : undefined;
+            if (!decrypted) {
+                shouldPurgePersistedState = true;
+                return undefined;
+            }
+
+            const parsedState = JSON.parse(decrypted);
+            if (!isValidSessionState(parsedState)) {
+                shouldPurgePersistedState = true;
+                return undefined;
+            }
+
+            return parsedState;
         } catch {
+            shouldPurgePersistedState = true;
             return undefined;
         }
     },
@@ -53,4 +98,13 @@ export const store = configureStore({
         })
 });
 
-export const persistor = persistStore(store);
+export const persistor = persistStore(store, null, () => {
+    if (!shouldPurgePersistedState) {
+        return;
+    }
+
+    shouldPurgePersistedState = false;
+    persistor.purge().catch(() => {
+        // Ignore purge errors and continue with reducer defaults.
+    });
+});

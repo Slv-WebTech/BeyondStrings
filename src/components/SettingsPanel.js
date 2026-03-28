@@ -16,9 +16,11 @@ function SettingsPanel({
     onCurrentUserChange,
     onAvatarUpload,
     onBackgroundUpload,
-    selectedBackground,
+    selectedBackgroundId,
+    hasCustomBackground = false,
     backgroundOptions = [],
     onBackgroundPresetSelect,
+    onResetPreferences,
     onExport,
     onClearChat,
     isClearingChat = false,
@@ -48,8 +50,8 @@ function SettingsPanel({
                         <button
                             key={option.id}
                             type="button"
-                            onClick={() => onBackgroundPresetSelect?.(option.url)}
-                            className={`overflow-hidden rounded-lg border text-left transition ${selectedBackground === option.url
+                            onClick={() => onBackgroundPresetSelect?.(option.id)}
+                            className={`overflow-hidden rounded-lg border text-left transition ${selectedBackgroundId === option.id
                                 ? 'border-emerald-400/60 ring-1 ring-emerald-400/40'
                                 : 'border-[var(--border-soft)] hover:border-emerald-400/40'
                                 }`}
@@ -149,7 +151,7 @@ function SettingsPanel({
                             <button
                                 type="button"
                                 onClick={() => onBackgroundPresetSelect?.('')}
-                                className={`mt-2 w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${!selectedBackground
+                                className={`mt-2 w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition ${!selectedBackgroundId && !hasCustomBackground
                                     ? 'border-emerald-400/60 bg-emerald-500/10 text-[var(--text-main)]'
                                     : 'border-[var(--border-soft)] bg-[var(--panel-soft)] text-[var(--text-muted)] hover:border-emerald-400/40'
                                     }`}
@@ -157,8 +159,16 @@ function SettingsPanel({
                                 Theme Default
                             </button>
 
+                            {hasCustomBackground ? (
+                                <p className="mt-2 text-[11px] font-medium text-emerald-300">Custom wallpaper selected</p>
+                            ) : null}
+
                             {theme === 'light' ? renderBackgroundPresetGroup('Light Presets', lightBackgroundOptions) : renderBackgroundPresetGroup('Dark Presets', darkBackgroundOptions)}
                             {theme === 'light' ? renderBackgroundPresetGroup('Dark Presets', darkBackgroundOptions) : renderBackgroundPresetGroup('Light Presets', lightBackgroundOptions)}
+
+                            <Button type="button" variant="outline" onClick={onResetPreferences} className="mt-3 w-full">
+                                Reset all preferences
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
