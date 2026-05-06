@@ -2091,7 +2091,7 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         }
 
         setRoomId('room1');
-        
+
         // Delegate to parent logout callback (root app's handleLogout)
         onBackHome?.();
     };
