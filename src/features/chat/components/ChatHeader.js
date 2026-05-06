@@ -93,7 +93,7 @@ function ChatHeader({
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="header-icon-button h-9 w-9 md:hidden"
+                                className="header-icon-button h-8 w-8 md:hidden"
                                 aria-label="Open chat sidebar"
                                 title="Open chat sidebar"
                                 onClick={() => onOpenSidebar?.()}
@@ -183,7 +183,7 @@ function ChatHeader({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="header-icon-button h-10 w-10 md:h-[2.2rem] md:w-[2.2rem]"
+                            className="header-icon-button h-8 w-8 md:h-[2.2rem] md:w-[2.2rem]"
                             aria-label={showSearch ? 'Hide search' : 'Show search'}
                             onClick={() => onToggleSearch?.()}
                             title={showSearch ? 'Hide search' : 'Show search'}
@@ -194,7 +194,7 @@ function ChatHeader({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="header-icon-button hidden h-10 w-10 sm:inline-flex md:h-[2.35rem] md:w-[2.35rem]"
+                            className="header-icon-button hidden h-8 w-8 sm:inline-flex md:h-[2.35rem] md:w-[2.35rem]"
                             aria-label="Toggle AI panel"
                             onClick={() => onToggleAiPanel?.()}
                             title="AI assistant"
@@ -206,7 +206,7 @@ function ChatHeader({
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="header-icon-button h-10 w-10 md:h-[2.2rem] md:w-[2.2rem]"
+                                className="header-icon-button h-8 w-8 md:h-[2.2rem] md:w-[2.2rem]"
                                 aria-label="More actions"
                                 onClick={() => setMenuOpen((prev) => !prev)}
                             >

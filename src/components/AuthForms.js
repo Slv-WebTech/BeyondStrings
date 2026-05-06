@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { motion } from "framer-motion";
 import { Briefcase, Heart, LogIn, Moon, Settings2, ShieldCheck, Sparkles, Sun, UserRoundPlus, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,7 +8,15 @@ import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 import { clearAuthError, loginUser, registerUser, selectAuthError, selectAuthStatus, updateUserProfile } from "../store/authSlice";
+import { selectChatMode, selectThemePreference, setChatMode, setThemePreference } from "../store/appSessionSlice";
 import { BRAND, BRAND_ASSETS } from "../config/branding";
+import wallpaperLeft from "../assets/wallpapers/premium-diagonal-a.jpg";
+import wallpaperRight from "../assets/wallpapers/premium-diagonal-b.jpg";
+
+const fadeStaggerItem = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+};
 
 function UsernameSetupDialog({ open, onOpenChange, onSuccess, visualTheme }) {
   const dispatch = useDispatch();
@@ -15,6 +24,9 @@ function UsernameSetupDialog({ open, onOpenChange, onSuccess, visualTheme }) {
   const error = useSelector(selectAuthError);
   const [username, setUsername] = useState("");
   const isLightTheme = visualTheme === "light";
+  const errorClass = isLightTheme
+    ? "rounded-2xl border border-red-300/70 bg-red-50 px-3 py-2 text-sm text-red-700"
+    : "rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-200";
   const USERNAME_PATTERN = /^[A-Z][A-Za-z0-9_]{2,19}$/;
   const formatUsername = (value) => {
     const safeValue = String(value || "").trim().replace(/[^A-Za-z0-9_]/g, "");
@@ -77,7 +89,7 @@ function UsernameSetupDialog({ open, onOpenChange, onSuccess, visualTheme }) {
               </p>
             </label>
 
-            {error ? <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
+            {error ? <p className={errorClass}>{error}</p> : null}
 
             <Button type="submit" className="h-11 w-full" disabled={!canSubmit}>
               {status === "loading" ? "Saving..." : "Continue"}
@@ -100,6 +112,21 @@ function AuthDialog({ mode, open, onOpenChange, onSuccess, visualTheme, onSignup
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const canSubmit = useMemo(() => isValidEmail && password.length >= 6 && status !== "loading", [email, password, status]);
   const isLightTheme = visualTheme === "light";
+  const errorClass = isLightTheme
+    ? "rounded-2xl border border-red-300/70 bg-red-50 px-3 py-2 text-sm text-red-700"
+    : "rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-200";
+  const dialogSkinClass = isLightTheme
+    ? "border-white/80 bg-white/78 text-slate-800"
+    : "border-cyan-200/25 bg-slate-950/72 text-slate-100";
+  const fieldClass = isLightTheme
+    ? "rounded-2xl border-slate-300 bg-white/90 text-slate-800"
+    : "rounded-2xl border-cyan-100/20 bg-slate-900/65 text-slate-100";
+  const dialogOverlayClass = isLightTheme
+    ? "absolute inset-0 bg-[linear-gradient(140deg,rgba(255,255,255,0.72),rgba(241,245,249,0.82))]"
+    : "absolute inset-0 bg-[linear-gradient(140deg,rgba(2,6,23,0.42),rgba(3,23,38,0.86))]";
+  const dialogGlowClass = isLightTheme
+    ? "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,0.12),transparent_42%),radial-gradient(circle_at_86%_85%,rgba(16,185,129,0.1),transparent_44%)]"
+    : "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,0.18),transparent_42%),radial-gradient(circle_at_86%_85%,rgba(16,185,129,0.16),transparent_44%)]";
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -129,45 +156,65 @@ function AuthDialog({ mode, open, onOpenChange, onSuccess, visualTheme, onSignup
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className={`fixed inset-0 z-40 backdrop-blur-sm ${isLightTheme ? "bg-slate-900/35" : "bg-slate-950/65"}`} />
+        <Dialog.Overlay className={`fixed inset-0 z-40 backdrop-blur-md ${isLightTheme ? "bg-slate-900/30" : "bg-slate-950/72"}`} />
         <Dialog.Content
-          className={`fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-[1.4rem] border p-5 shadow-2xl ${isLightTheme ? "border-slate-200 bg-white/92 text-slate-800" : "border-white/10 bg-slate-950/92 text-slate-100"
-            }`}
+          className={`fixed left-1/2 top-1/2 z-50 w-[min(92vw,440px)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] border p-5 shadow-2xl backdrop-blur-2xl ${dialogSkinClass}`}
         >
+          <div className="pointer-events-none absolute inset-0">
+            <img src={isLogin ? wallpaperLeft : wallpaperRight} alt="" className="h-full w-full object-cover opacity-28" />
+            <div className={dialogOverlayClass} />
+          </div>
+          <div className={dialogGlowClass} />
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
+          <motion.div variants={fadeStaggerItem} initial="initial" animate="animate" transition={{ duration: 0.25, delay: 0.04 }}>
           <Dialog.Title className="text-lg font-semibold tracking-tight">{actionLabel}</Dialog.Title>
           <Dialog.Description className={`mt-1 text-sm ${isLightTheme ? "text-slate-500" : "text-slate-300/80"}`}>
             {isLogin ? "Email + password." : "Create your account in seconds."}
           </Dialog.Description>
+          </motion.div>
 
-          <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
-            <label className="block space-y-1">
+          <motion.form
+            className="mt-4 space-y-3"
+            onSubmit={handleSubmit}
+            initial="initial"
+            animate="animate"
+            transition={{ staggerChildren: 0.06, delayChildren: 0.08 }}
+          >
+            <motion.label className="block space-y-1" variants={fadeStaggerItem} transition={{ duration: 0.22 }}>
               <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>Email</span>
               <Input
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 type="email"
                 placeholder="you@example.com"
-                className={`rounded-2xl ${isLightTheme ? "border-slate-300 bg-white text-slate-800" : ""}`}
+                className={fieldClass}
                 autoFocus
               />
-            </label>
-            <label className="block space-y-1">
+            </motion.label>
+            <motion.label className="block space-y-1" variants={fadeStaggerItem} transition={{ duration: 0.22 }}>
               <span className={`text-xs font-semibold uppercase tracking-[0.18em] ${isLightTheme ? "text-slate-500" : "text-slate-400"}`}>Password</span>
               <Input
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 type="password"
                 placeholder="At least 6 characters"
-                className={`rounded-2xl ${isLightTheme ? "border-slate-300 bg-white text-slate-800" : ""}`}
+                className={fieldClass}
               />
-            </label>
+            </motion.label>
 
-            {error ? <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
+            {error ? <motion.p variants={fadeStaggerItem} className={errorClass}>{error}</motion.p> : null}
 
-            <Button type="submit" className="h-11 w-full" disabled={!canSubmit}>
-              {status === "loading" ? "Working..." : actionLabel}
-            </Button>
-          </form>
+            <motion.div variants={fadeStaggerItem} transition={{ duration: 0.22 }}>
+              <Button type="submit" className="h-11 w-full" disabled={!canSubmit}>
+                {status === "loading" ? "Working..." : actionLabel}
+              </Button>
+            </motion.div>
+          </motion.form>
 
           <Dialog.Close
             className={`absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${isLightTheme ? "border-slate-200 text-slate-500 hover:bg-slate-100" : "border-white/10 text-slate-300 hover:bg-white/10"
@@ -175,6 +222,7 @@ function AuthDialog({ mode, open, onOpenChange, onSuccess, visualTheme, onSignup
           >
             <X size={16} />
           </Dialog.Close>
+          </motion.div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -182,13 +230,16 @@ function AuthDialog({ mode, open, onOpenChange, onSuccess, visualTheme, onSignup
 }
 
 export default function AuthForms({ onAuthenticated }) {
+  const dispatch = useDispatch();
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [usernameSetupOpen, setUsernameSetupOpen] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
   const appearanceRef = useRef(null);
-  const [moodMode, setMoodMode] = useState("professional");
-  const [visualTheme, setVisualTheme] = useState("dark");
+  const moodMode = useSelector(selectChatMode);
+  const themePreference = useSelector(selectThemePreference);
+  const [prefersDark, setPrefersDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const visualTheme = themePreference === "system" ? (prefersDark ? "dark" : "light") : themePreference;
   const isProfessional = moodMode === "professional";
   const isCasual = moodMode === "casual";
   const isLightTheme = visualTheme === "light";
@@ -201,11 +252,13 @@ export default function AuthForms({ onAuthenticated }) {
       ? "bg-[radial-gradient(circle_at_12%_16%,rgba(56,189,248,0.2),transparent_32%),radial-gradient(circle_at_84%_82%,rgba(16,185,129,0.16),transparent_28%),linear-gradient(150deg,#050f18_0%,#0f1f2f_100%)]"
       : "bg-[radial-gradient(circle_at_14%_18%,rgba(244,114,182,0.22),transparent_34%),radial-gradient(circle_at_84%_82%,rgba(251,113,133,0.18),transparent_32%),linear-gradient(150deg,#180a18_0%,#2a1025_100%)]";
 
-  const wallpaperClass = isCasual
-    ? "bg-[radial-gradient(circle_at_72%_76%,rgba(244,114,182,0.22),transparent_44%),repeating-linear-gradient(135deg,rgba(255,255,255,0.08)_0px,rgba(255,255,255,0.08)_1px,transparent_1px,transparent_24px),repeating-linear-gradient(135deg,rgba(255,255,255,0.04)_0px,rgba(255,255,255,0.04)_1px,transparent_1px,transparent_48px)]"
-    : "bg-[radial-gradient(circle_at_80%_76%,rgba(56,189,248,0.18),transparent_42%),repeating-linear-gradient(135deg,rgba(148,163,184,0.1)_0px,rgba(148,163,184,0.1)_1px,transparent_1px,transparent_24px),repeating-linear-gradient(135deg,rgba(148,163,184,0.05)_0px,rgba(148,163,184,0.05)_1px,transparent_1px,transparent_48px)]";
-
-  const shellVeilClass = isLightTheme ? "bg-white/16" : "bg-slate-950/24";
+  const shellVeilClass = isLightTheme ? "bg-white/24" : "bg-slate-950/38";
+  const pageFilmClass = isLightTheme
+    ? "pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,rgba(255,255,255,0.48)_0%,rgba(248,250,252,0.42)_48%,rgba(241,245,249,0.54)_100%)]"
+    : "pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,rgba(7,12,24,0.72)_0%,rgba(7,12,24,0.54)_48%,rgba(8,17,28,0.75)_100%)]";
+  const pageGlowClass = isLightTheme
+    ? "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_20%,rgba(59,130,246,0.12),transparent_38%),radial-gradient(circle_at_82%_80%,rgba(16,185,129,0.1),transparent_40%)]"
+    : "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_20%,rgba(59,130,246,0.2),transparent_38%),radial-gradient(circle_at_82%_80%,rgba(16,185,129,0.16),transparent_40%)]";
   const cardClass = isLightTheme
     ? "border-white/70 bg-white/62 text-slate-800"
     : "border-white/12 bg-slate-950/55 text-slate-100";
@@ -223,6 +276,13 @@ export default function AuthForms({ onAuthenticated }) {
   const secondaryButtonClass = isLightTheme
     ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
     : "border-slate-400/35 bg-slate-900/65 text-slate-100 hover:bg-slate-800/70";
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => setPrefersDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     if (!showAppearance) {
@@ -251,16 +311,36 @@ export default function AuthForms({ onAuthenticated }) {
   }, [showAppearance]);
 
   return (
-    <div className={`relative flex min-h-[100svh] items-center justify-center overflow-hidden px-4 py-8 transition-all sm:px-6 ${shellClass}`}>
+    <div className={`relative flex min-h-[100svh] items-center justify-center overflow-hidden px-4 py-8 transition-all sm:px-6 [font-family:'Sora','Manrope','Segoe_UI',sans-serif] ${shellClass}`}>
       <div className={`hero-orb left-[-70px] top-[6%] h-44 w-44 ${isCasual ? "bg-pink-300/28" : "bg-cyan-300/24"}`} />
       <div className={`hero-orb right-[-60px] top-[18%] h-64 w-64 ${isCasual ? "bg-fuchsia-300/26" : "bg-emerald-300/22"}`} />
-      <div className={`pointer-events-none absolute inset-0 opacity-80 ${wallpaperClass}`} />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 overflow-hidden [clip-path:polygon(0_0,64%_0,42%_100%,0_100%)]">
+          <img src={wallpaperLeft} alt="" className="h-full w-full object-cover opacity-36" />
+        </div>
+        <div className="absolute inset-0 overflow-hidden [clip-path:polygon(58%_0,100%_0,100%_100%,36%_100%)]">
+          <img src={wallpaperRight} alt="" className="h-full w-full object-cover opacity-34" />
+        </div>
+      </div>
+      <div className={pageFilmClass} />
+      <div className={pageGlowClass} />
       <div className={`pointer-events-none absolute inset-0 ${shellVeilClass}`} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(15,23,42,0.08)_100%)]" />
 
-      <Card className={`relative z-10 w-full max-w-3xl rounded-[1.8rem] border backdrop-blur-2xl transition-all ${cardClass}`}>
+      <motion.div
+        className="relative z-10 w-full max-w-3xl"
+        initial={{ opacity: 0, y: 18, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.42, ease: "easeOut" }}
+      >
+      <Card className={`rounded-[1.8rem] border backdrop-blur-2xl transition-all ${cardClass}`}>
         <CardContent className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1.25fr,1fr] lg:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
+          <motion.div
+            className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, delay: 0.06 }}
+          >
             <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${bodyTextClass}`}>Welcome</p>
 
             <div className="flex items-center gap-1.5">
@@ -286,7 +366,7 @@ export default function AuthForms({ onAuthenticated }) {
                       <button
                         type="button"
                         aria-label={moodSwitchLabel}
-                        onClick={() => setMoodMode((current) => (current === "professional" ? "casual" : "professional"))}
+                        onClick={() => dispatch(setChatMode(moodMode === "professional" ? "casual" : "professional"))}
                         className={`relative inline-flex h-8 w-[5rem] items-center rounded-full border px-1 transition ${segmentBaseClass}`}
                       >
                         <span className="inline-flex w-full items-center justify-between px-1" aria-hidden="true">
@@ -303,7 +383,7 @@ export default function AuthForms({ onAuthenticated }) {
                       <button
                         type="button"
                         aria-label={themeSwitchTarget === "light" ? "Light" : "Dark"}
-                        onClick={() => setVisualTheme((current) => (current === "dark" ? "light" : "dark"))}
+                        onClick={() => dispatch(setThemePreference(visualTheme === "dark" ? "light" : "dark"))}
                         className={`relative inline-flex h-8 w-[5rem] items-center rounded-full border px-1 transition ${segmentBaseClass}`}
                       >
                         <span className="inline-flex w-full items-center justify-between px-1" aria-hidden="true">
@@ -321,9 +401,14 @@ export default function AuthForms({ onAuthenticated }) {
                 ) : null}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <section className={`space-y-4 rounded-[1.3rem] border p-5 transition-all backdrop-blur-xl ${panelClass}`}>
+          <motion.section
+            className={`space-y-4 rounded-[1.3rem] border p-5 transition-all backdrop-blur-xl ${panelClass}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.26, delay: 0.12 }}
+          >
               <img
               src={isLightTheme ? BRAND_ASSETS.logoLight : BRAND_ASSETS.logoDark}
               alt={BRAND.name}
@@ -346,9 +431,14 @@ export default function AuthForms({ onAuthenticated }) {
                 End-to-End Encrypted
               </span>
             </div>
-          </section>
+          </motion.section>
 
-          <section className={`space-y-3 rounded-[1.3rem] border p-5 transition-all backdrop-blur-xl ${panelClass}`}>
+          <motion.section
+            className={`space-y-3 rounded-[1.3rem] border p-5 transition-all backdrop-blur-xl ${panelClass}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.26, delay: 0.2 }}
+          >
             <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${bodyTextClass}`}>Get Started</p>
 
             <Button type="button" className={`h-11 w-full justify-center ${primaryButtonClass}`} onClick={() => setRegisterOpen(true)}>
@@ -365,9 +455,10 @@ export default function AuthForms({ onAuthenticated }) {
               <LogIn size={16} />
               Sign In
             </Button>
-          </section>
+          </motion.section>
         </CardContent>
       </Card>
+      </motion.div>
 
       <AuthDialog
         mode="register"
@@ -389,3 +480,5 @@ export default function AuthForms({ onAuthenticated }) {
     </div>
   );
 }
+
+

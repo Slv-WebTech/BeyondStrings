@@ -548,7 +548,7 @@ export default function Home({ navigate, onLogout }) {
         title="Home"
         showAdmin={isAdmin}
         rightAction={
-          <div className="flex items-center gap-1.5 md:gap-2">
+          <div className="flex max-w-[60vw] items-center gap-1 overflow-x-auto pb-0.5 pr-0.5 md:max-w-none md:gap-2 md:overflow-visible">
             {/* Create Group popover */}
             <div className="relative" ref={createGroupRef}>
               <Button
@@ -556,11 +556,11 @@ export default function Home({ navigate, onLogout }) {
                 variant="secondary"
                 size="icon"
                 onClick={() => { setCreateGroupOpen((v) => !v); setJoinGroupOpen(false); }}
-                className="h-8 w-8 rounded-full md:h-9 md:w-9"
+                className="h-7 w-7 rounded-full md:h-9 md:w-9"
                 aria-label="Create group"
                 title="Create group"
               >
-                <Users size={15} />
+                <Users size={14} />
               </Button>
               {createGroupOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.55rem)] z-[500] w-[min(18rem,calc(100vw-1rem))] rounded-[1.35rem] border border-[var(--border-soft)] bg-[color:color-mix(in_srgb,var(--panel)_92%,transparent)] p-3 shadow-[0_24px_80px_rgba(2,6,23,0.42)] backdrop-blur-2xl">
@@ -598,11 +598,11 @@ export default function Home({ navigate, onLogout }) {
                 variant="secondary"
                 size="icon"
                 onClick={() => { setJoinGroupOpen((v) => !v); setCreateGroupOpen(false); }}
-                className="h-8 w-8 rounded-full md:h-9 md:w-9"
+                className="h-7 w-7 rounded-full md:h-9 md:w-9"
                 aria-label="Join group"
                 title="Join group"
               >
-                <UserPlus size={15} />
+                <UserPlus size={14} />
               </Button>
               {joinGroupOpen && (
                 <div className="absolute right-0 top-[calc(100%+0.55rem)] z-[500] w-[min(18rem,calc(100vw-1rem))] rounded-[1.35rem] border border-[var(--border-soft)] bg-[color:color-mix(in_srgb,var(--panel)_92%,transparent)] p-3 shadow-[0_24px_80px_rgba(2,6,23,0.42)] backdrop-blur-2xl">
@@ -639,11 +639,11 @@ export default function Home({ navigate, onLogout }) {
                 variant="secondary"
                 size="icon"
                 onClick={() => navigate("/admin")}
-                className="h-8 w-8 rounded-full md:h-9 md:w-9"
+                className="h-7 w-7 rounded-full md:h-9 md:w-9"
                 aria-label="Open admin panel"
                 title="Open admin panel"
               >
-                <Shield size={15} />
+                <Shield size={14} />
               </Button>
             ) : null}
             <input
@@ -658,16 +658,16 @@ export default function Home({ navigate, onLogout }) {
               variant="secondary"
               onClick={() => importInputRef.current?.click()}
               disabled={isImporting}
-              className="h-8 rounded-full px-2.5 md:h-9 md:px-3"
+              className="h-7 rounded-full px-2 md:h-9 md:px-3"
             >
-              <Upload size={14} />
-              <span className="hidden md:inline">{isImporting ? 'Importing...' : 'Import'}</span>
+              <Upload size={13} />
+              <span className="hidden lg:inline">{isImporting ? 'Importing...' : 'Import'}</span>
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 overflow-hidden rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)]"
+              className="h-7 w-7 overflow-hidden rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)] md:h-8 md:w-8"
               onClick={() => navigate('/profile')}
               aria-label="Open profile"
               title="Open profile"
@@ -680,19 +680,19 @@ export default function Home({ navigate, onLogout }) {
             </Button>
             <HelpModal
               isAdmin={isAdmin}
-              triggerClassName="h-8 w-8 rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)]"
-              triggerIconSize={15}
+              triggerClassName="h-7 w-7 rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)] md:h-8 md:w-8"
+              triggerIconSize={14}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)]"
+              className="h-7 w-7 rounded-full border border-[var(--border-soft)] bg-[var(--panel-soft)] md:h-8 md:w-8"
               onClick={onLogout}
               aria-label="Logout"
               title="Logout"
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </Button>
           </div>
         }

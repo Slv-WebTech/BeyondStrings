@@ -57,8 +57,8 @@ function LiveComposer({
                     <div className="mb-1.5 rounded-2xl border border-cyan-100/30 bg-black/26 px-3 py-2 text-slate-100 md:mb-2">
                         <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100/85">Replying to {replyTo.sender || 'message'}</p>
-                                <p className="truncate text-xs text-slate-200/90">{replyTo.message}</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100/85">Replying to {replyTo.sender && String(replyTo.sender).trim() ? String(replyTo.sender).trim() : 'message'}</p>
+                                <p className="truncate text-xs text-slate-200/90">{replyTo.message && String(replyTo.message).trim() ? String(replyTo.message).trim() : '(empty message)'}</p>
                             </div>
                             <button
                                 type="button"

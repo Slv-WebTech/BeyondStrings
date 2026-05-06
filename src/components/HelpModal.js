@@ -111,11 +111,11 @@ export default function HelpModal({ isAdmin = false, triggerClassName = "", trig
 
             <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" />
-                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[90svh] w-[min(95vw,680px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[1.8rem] border border-white/10 bg-[#07111b] shadow-2xl ring-1 ring-white/5 focus:outline-none">
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[90svh] w-[min(95vw,680px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[1.4rem] border border-white/10 bg-[#07111b] shadow-2xl ring-1 ring-white/5 focus:outline-none md:rounded-[1.8rem]">
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5 md:px-6 md:py-5">
                         <div>
-                            <Dialog.Title className="text-xl font-semibold tracking-tight text-slate-100">
+                            <Dialog.Title className="text-lg font-semibold tracking-tight text-slate-100 md:text-xl">
                                 {`How to use ${BRAND.name}`}
                             </Dialog.Title>
                             <Dialog.Description className="mt-0.5 text-sm text-slate-400">
@@ -130,23 +130,20 @@ export default function HelpModal({ isAdmin = false, triggerClassName = "", trig
                     </div>
 
                     {/* Scrollable step list */}
-                    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                    <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5 md:px-6 md:py-5">
                         <ol className="space-y-4">
                             {steps.map((step) => {
                                 const StepIcon = step.icon;
                                 return (
-                                    <li
-                                        key={step.number}
-                                        className={`flex gap-4 rounded-[1.2rem] border ${step.border} ${step.bg} p-4`}
-                                    >
+                                    <li key={step.number} className={`flex gap-3 rounded-[1rem] border ${step.border} ${step.bg} p-3 md:gap-4 md:rounded-[1.2rem] md:p-4`}>
                                         <div className="shrink-0">
-                                            <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 ${step.color}`}>
-                                                <StepIcon size={18} />
+                                            <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 ${step.color} md:h-10 md:w-10 md:rounded-xl`}>
+                                                <StepIcon size={16} />
                                             </span>
                                             <p className={`mt-1 text-center text-[11px] font-semibold ${step.color}`}>{step.number}</p>
                                         </div>
                                         <div>
-                                            <p className={`font-semibold ${step.color}`}>{step.title}</p>
+                                            <p className={`text-sm font-semibold md:text-base ${step.color}`}>{step.title}</p>
                                             <p className="mt-1 text-sm leading-relaxed text-slate-300/90">{step.description}</p>
                                         </div>
                                     </li>
@@ -162,7 +159,7 @@ export default function HelpModal({ isAdmin = false, triggerClassName = "", trig
                     </div>
 
                     {/* Footer close button */}
-                    <div className="border-t border-white/10 px-6 py-4">
+                    <div className="border-t border-white/10 px-4 py-3 md:px-6 md:py-4">
                         <Dialog.Close asChild>
                             <Button type="button" className="w-full rounded-2xl" variant="secondary">
                                 Got it

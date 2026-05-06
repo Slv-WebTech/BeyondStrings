@@ -309,7 +309,7 @@ function SettingsPanel({
                         </div>
 
                         <div className="mt-5 rounded-[1.2rem] border border-red-400/25 bg-red-500/8 p-3">
-                            <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-red-200 dark:text-red-200">
+                            <h4 className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-200">
                                 <Trash2 size={15} />
                                 Danger Zone
                             </h4>

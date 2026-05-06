@@ -9,7 +9,7 @@ const AdminPage = lazy(() => import('./pages/Admin'));
 const ChatPage = lazy(() => import('./pages/Chat'));
 const Home = lazy(() => import('./pages/Home'));
 const ImportedChatPage = lazy(() => import('./pages/ImportedChat'));
-const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const LandingPage = lazy(() => import('./pages/landing/BeyondStringsLanding.js'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
 import { getActiveChatRouteId, setActiveChatRouteId } from './utils/chatRouteState';
 import {
@@ -20,7 +20,7 @@ import {
     selectIsAuthenticated,
     setResolvedAuthState
 } from './store/authSlice';
-import { selectThemePreference } from './store/appSessionSlice';
+import { selectThemePreference, setThemePreference } from './store/appSessionSlice';
 import { loadUserProfile, subscribeAuthUser, syncUserChatMembership } from './services/firebase/socialService';
 
 export default function RootApp() {
@@ -31,6 +31,7 @@ export default function RootApp() {
     const isAdmin = useSelector(selectIsAdmin);
     const authInitialized = useSelector(selectAuthInitialized);
     const themePreference = useSelector(selectThemePreference);
+    const resolvedTheme = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
     const { show: showOnboarding, dismiss: dismissOnboarding } = useOnboarding();
 
@@ -43,9 +44,8 @@ export default function RootApp() {
     }, []);
 
     useEffect(() => {
-        const resolved = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
-        document.documentElement.setAttribute('data-theme', resolved);
-    }, [themePreference, prefersDark]);
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+    }, [resolvedTheme]);
 
     useEffect(() => {
         const unsubscribe = subscribeAuthUser(async (firebaseUser) => {
@@ -160,6 +160,11 @@ export default function RootApp() {
             <Suspense fallback={loadingFallback}>
                 <LandingPage
                     onSignIn={() => route.navigate('/login')}
+                    onSignUp={() => route.navigate('/sign-up')}
+                    themeMode={resolvedTheme}
+                    onToggleTheme={() => {
+                        dispatch(setThemePreference(resolvedTheme === 'dark' ? 'light' : 'dark'));
+                    }}
                     onSelectAction={(action) => {
                         if (action === 'live') route.navigate('/login');
                         else if (action === 'import') route.navigate('/login');

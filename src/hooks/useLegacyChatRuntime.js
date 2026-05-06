@@ -2091,6 +2091,9 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         }
 
         setRoomId('room1');
+        
+        // Delegate to parent logout callback (root app's handleLogout)
+        onBackHome?.();
     };
 
     const resetRoomTimelineState = () => {
@@ -2508,11 +2511,13 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
             return;
         }
 
-        setReplyToMessage({
-            id: message.id,
-            sender: message.sender,
-            message: String(message.message || '').slice(0, 120)
-        });
+        const replyData = {
+            id: message.id || message.clientId || `reply-${Date.now()}`,
+            sender: String(message.sender || 'User').trim() || 'User',
+            message: String(message.message || '').slice(0, 120).trim() || '[message]'
+        };
+
+        setReplyToMessage(replyData);
     }, []);
 
     const handleCopyMessage = useCallback(async (message) => {

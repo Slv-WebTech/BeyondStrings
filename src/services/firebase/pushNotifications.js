@@ -68,7 +68,7 @@ async function persistPushToken(token) {
             ...(await getAuthHeader())
         };
 
-        const response = await fetch(`${API_BASE}/notifications/register-token`, {
+        const response = await fetch(`${API_BASE}/notifications/preferences`, {
             method: 'POST',
             headers,
             body: JSON.stringify({

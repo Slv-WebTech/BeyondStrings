@@ -127,7 +127,10 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
     const [menuOpen, setMenuOpen] = useState(false);
     const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
     const messageType = classifyMessage(message);
-    const reactionEntries = Object.entries(message.reactions || {}).filter(([, count]) => Number(count) > 0);
+    const reactionEntries = Object.entries(message.reactions || {}).filter(([, count]) => {
+        const normalizedCount = Array.isArray(count) ? count.length : Number(count);
+        return normalizedCount > 0;
+    });
     const normalizedText = String(message?.message || '').trim();
     const shouldRenderText = messageType === 'text' && normalizedText.length > 0;
     const canDeleteForEveryone = Boolean(isCurrentUser && message?.firestoreId);
@@ -385,12 +388,15 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
 
                     {reactionEntries.length ? (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                            {reactionEntries.map(([emoji, count]) => (
-                                <span key={`${message.id}-${emoji}`} className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[11px] font-medium">
-                                    <span>{emoji}</span>
-                                    <span>{count}</span>
-                                </span>
-                            ))}
+                            {reactionEntries.map(([emoji, count]) => {
+                                const normalizedCount = Array.isArray(count) ? count.length : Number(count);
+                                return (
+                                    <span key={`${message.id}-${emoji}`} className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[11px] font-medium">
+                                        <span>{emoji}</span>
+                                        <span>{normalizedCount}</span>
+                                    </span>
+                                );
+                            })}
                         </div>
                     ) : null}
                 </motion.div>
