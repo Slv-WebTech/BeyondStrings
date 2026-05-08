@@ -23,6 +23,70 @@ import {
 import { selectThemePreference, setThemePreference } from './store/appSessionSlice';
 import { loadUserProfile, subscribeAuthUser, syncUserChatMembership } from './services/firebase/socialService';
 
+const DEFAULT_TITLE = 'BeyondStrings | Secure Real-Time Chat';
+const DEFAULT_DESCRIPTION = 'Privacy-first real-time chat with replay controls, encrypted media, and AI-powered conversation insights.';
+const DEFAULT_OG_IMAGE = '/og-image.svg';
+
+function getPublicBaseUrl() {
+    const configured = String(import.meta.env.PUBLIC_APP_URL || '').trim();
+    if (configured) {
+        return configured.replace(/\/$/, '');
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return window.location.origin;
+    }
+    return 'https://beyondstrings.app';
+}
+
+function upsertMeta(attr, key, content) {
+    if (!content) {
+        return;
+    }
+    let node = document.head.querySelector(`meta[${attr}="${key}"]`);
+    if (!node) {
+        node = document.createElement('meta');
+        node.setAttribute(attr, key);
+        document.head.appendChild(node);
+    }
+    node.setAttribute('content', content);
+}
+
+function removeMeta(attr, key) {
+    const node = document.head.querySelector(`meta[${attr}="${key}"]`);
+    if (node) {
+        node.remove();
+    }
+}
+
+function upsertLink(rel, href) {
+    if (!href) {
+        return;
+    }
+    let node = document.head.querySelector(`link[rel="${rel}"]`);
+    if (!node) {
+        node = document.createElement('link');
+        node.setAttribute('rel', rel);
+        document.head.appendChild(node);
+    }
+    node.setAttribute('href', href);
+}
+
+function upsertJsonLd(scriptId, payload) {
+    if (!payload) {
+        return;
+    }
+
+    let node = document.head.querySelector(`script#${scriptId}[type="application/ld+json"]`);
+    if (!node) {
+        node = document.createElement('script');
+        node.type = 'application/ld+json';
+        node.id = scriptId;
+        document.head.appendChild(node);
+    }
+
+    node.textContent = JSON.stringify(payload);
+}
+
 export default function RootApp() {
     const dispatch = useDispatch();
     const route = useSimpleRouter();
@@ -34,6 +98,140 @@ export default function RootApp() {
     const resolvedTheme = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
     const { show: showOnboarding, dismiss: dismissOnboarding } = useOnboarding();
+
+    useEffect(() => {
+        const baseUrl = getPublicBaseUrl();
+        const googleVerification = String(import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION || '').trim();
+        const bingVerification = String(import.meta.env.PUBLIC_BING_SITE_VERIFICATION || '').trim();
+
+        const landingJsonLd = [
+            {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'BeyondStrings',
+                url: `${baseUrl}/`,
+                logo: `${baseUrl}/apple-touch-icon.png`,
+                description: DEFAULT_DESCRIPTION
+            },
+            {
+                '@context': 'https://schema.org',
+                '@type': 'Product',
+                name: 'BeyondStrings',
+                category: 'Communication Software',
+                image: `${baseUrl}${DEFAULT_OG_IMAGE}`,
+                description: DEFAULT_DESCRIPTION,
+                brand: {
+                    '@type': 'Brand',
+                    name: 'BeyondStrings'
+                },
+                offers: {
+                    '@type': 'Offer',
+                    price: '0',
+                    priceCurrency: 'USD',
+                    availability: 'https://schema.org/InStock',
+                    url: `${baseUrl}/`
+                }
+            },
+            {
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                    {
+                        '@type': 'Question',
+                        name: 'Is BeyondStrings encrypted?',
+                        acceptedAnswer: {
+                            '@type': 'Answer',
+                            text: 'Yes. BeyondStrings applies encryption to protect conversation data and private messaging workflows.'
+                        }
+                    },
+                    {
+                        '@type': 'Question',
+                        name: 'Can teams use BeyondStrings for group collaboration?',
+                        acceptedAnswer: {
+                            '@type': 'Answer',
+                            text: 'Yes. The app supports direct and group conversations, moderation controls, and role-based management.'
+                        }
+                    },
+                    {
+                        '@type': 'Question',
+                        name: 'Does BeyondStrings include AI features?',
+                        acceptedAnswer: {
+                            '@type': 'Answer',
+                            text: 'Yes. BeyondStrings includes AI-powered insights and summary capabilities to help users understand conversations faster.'
+                        }
+                    }
+                ]
+            }
+        ];
+
+        const routeSeo = {
+            '/': {
+                title: DEFAULT_TITLE,
+                description: DEFAULT_DESCRIPTION,
+                canonicalPath: '/',
+                robots: 'index, follow, max-image-preview:large',
+                jsonLd: landingJsonLd
+            },
+            '/landing': {
+                title: DEFAULT_TITLE,
+                description: DEFAULT_DESCRIPTION,
+                canonicalPath: '/',
+                robots: 'index, follow, max-image-preview:large',
+                jsonLd: landingJsonLd
+            },
+            '/login': {
+                title: 'Login | BeyondStrings',
+                description: 'Sign in to BeyondStrings and continue secure, privacy-first conversations.',
+                canonicalPath: '/login',
+                robots: 'noindex, nofollow',
+                jsonLd: null
+            },
+            '/sign-up': {
+                title: 'Create Account | BeyondStrings',
+                description: 'Create your BeyondStrings account to start encrypted real-time chat.',
+                canonicalPath: '/sign-up',
+                robots: 'noindex, nofollow',
+                jsonLd: null
+            }
+        };
+
+        const fallbackSeo = {
+            title: DEFAULT_TITLE,
+            description: DEFAULT_DESCRIPTION,
+            canonicalPath: '/',
+            robots: 'noindex, nofollow',
+            jsonLd: null
+        };
+
+        const resolvedSeo = routeSeo[route.path] || fallbackSeo;
+        const canonicalUrl = `${baseUrl}${resolvedSeo.canonicalPath}`;
+        const ogImage = `${baseUrl}${DEFAULT_OG_IMAGE}`;
+
+        document.title = resolvedSeo.title;
+        upsertMeta('name', 'description', resolvedSeo.description);
+        upsertMeta('name', 'robots', resolvedSeo.robots);
+        upsertMeta('property', 'og:title', resolvedSeo.title);
+        upsertMeta('property', 'og:description', resolvedSeo.description);
+        upsertMeta('property', 'og:url', canonicalUrl);
+        upsertMeta('property', 'og:image', ogImage);
+        upsertMeta('name', 'twitter:title', resolvedSeo.title);
+        upsertMeta('name', 'twitter:description', resolvedSeo.description);
+        upsertMeta('name', 'twitter:image', ogImage);
+        upsertLink('canonical', canonicalUrl);
+
+        if (googleVerification) upsertMeta('name', 'google-site-verification', googleVerification);
+        else removeMeta('name', 'google-site-verification');
+
+        if (bingVerification) upsertMeta('name', 'msvalidate.01', bingVerification);
+        else removeMeta('name', 'msvalidate.01');
+
+        if (resolvedSeo.jsonLd) {
+            upsertJsonLd('route-jsonld', resolvedSeo.jsonLd);
+        } else {
+            const ldNode = document.head.querySelector('script#route-jsonld[type="application/ld+json"]');
+            if (ldNode) ldNode.remove();
+        }
+    }, [route.path]);
 
     // Keep data-theme in sync across all pages
     useEffect(() => {

@@ -55,6 +55,11 @@ npm run build
 npm run preview
 ```
 
+`npm run build` now runs SEO asset generation first (`npm run seo:generate`) to refresh:
+
+- `public/sitemap.xml`
+- `public/robots.txt`
+
 Migration helpers:
 
 ```bash
@@ -62,7 +67,24 @@ npm run migrate:group-approval:dry
 npm run migrate:group-approval
 ```
 
-## 4) Main Product Flow
+## 4) SEO + Search Console
+
+Set these in `.env.local` / deployment env once your domain is finalized:
+
+```env
+PUBLIC_APP_URL=https://your-domain.com
+PUBLIC_GOOGLE_SITE_VERIFICATION=
+PUBLIC_BING_SITE_VERIFICATION=
+PUBLIC_CONTENT_PATHS=/pricing,/features
+```
+
+Notes:
+
+- Per-page JSON-LD (Organization, Product, FAQ) for landing is injected from `src/RootApp.js`.
+- Default sitemap routes are defined in `scripts/sitemap-routes.json`.
+- Add new public content pages there (or via `PUBLIC_CONTENT_PATHS`) to include them in sitemap output.
+
+## 5) Main Product Flow
 
 1. Sign in or create account
 2. Open Home — pick a direct chat, create a group, or join by group ID
@@ -72,7 +94,7 @@ npm run migrate:group-approval
 6. Non-owner members can leave from Group Settings
 7. Admin dashboard is accessible via `/admin` for admin-role accounts
 
-## 5) Refactor-Oriented Dev Notes
+## 6) Refactor-Oriented Dev Notes
 
 - Keep `src/App.js` lightweight.
 - Add pure helpers to `src/features/chat/appRuntimeHelpers.js`.
@@ -81,7 +103,7 @@ npm run migrate:group-approval
 - Group management APIs live in `src/firebase/socialService.js`.
 - Message CRUD and reactions live in `src/firebase/chatService.js`.
 
-## 6) Quick QA Checklist
+## 7) Quick QA Checklist
 
 - Login; verify sidebar restores group chats without re-joining
 - Open direct chat: send, reply (check reply block renders), react with emoji
