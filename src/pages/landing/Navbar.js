@@ -4,6 +4,7 @@ import { NAV_LINKS } from './constants';
 import AnimatedButton from './AnimatedButton';
 import MaterialIcon from './MaterialIcon';
 import { BRAND_ASSETS } from '../../config/branding';
+import { usePwaInstall } from '../../hooks/usePwaInstall';
 
 /**
  * Navbar - Fixed top navigation with mobile hamburger menu
@@ -13,6 +14,7 @@ const Navbar = ({ className = '', onSignIn, onSignUp, themeMode = 'dark', onTogg
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeLink, setActiveLink] = useState('Platform');
+  const { isInstallable, install } = usePwaInstall();
 
   useEffect(() => {
     let ticking = false;
@@ -178,6 +180,21 @@ const Navbar = ({ className = '', onSignIn, onSignUp, themeMode = 'dark', onTogg
             <button className={cn('text-sm transition-colors px-4 py-2', themeMode === 'dark' ? 'text-zinc-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')} onClick={onSignIn}>
               Sign In
             </button>
+            {isInstallable && (
+              <button
+                onClick={install}
+                aria-label="Install BeyondStrings app"
+                className={cn(
+                  'flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border transition-all duration-300',
+                  themeMode === 'dark'
+                    ? 'border-[#00f0ff]/40 text-[#00f0ff] hover:bg-[#00f0ff]/10'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                )}
+              >
+                <MaterialIcon icon="download" size={16} />
+                Install
+              </button>
+            )}
             <AnimatedButton variant="primary" size="sm" onClick={onSignUp}>
               Get Started
             </AnimatedButton>
@@ -251,6 +268,21 @@ const Navbar = ({ className = '', onSignIn, onSignUp, themeMode = 'dark', onTogg
             <button className={cn('w-full py-3 transition-colors text-center', themeMode === 'dark' ? 'text-zinc-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')} onClick={onSignIn}>
               Sign In
             </button>
+            {isInstallable && (
+              <button
+                onClick={install}
+                aria-label="Install BeyondStrings app"
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-3 rounded-lg border transition-all duration-300 text-sm',
+                  themeMode === 'dark'
+                    ? 'border-[#00f0ff]/40 text-[#00f0ff] hover:bg-[#00f0ff]/10'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                )}
+              >
+                <MaterialIcon icon="download" size={18} />
+                Install App
+              </button>
+            )}
             <AnimatedButton variant="primary" fullWidth onClick={onSignUp}>
               Get Started
             </AnimatedButton>
