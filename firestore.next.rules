@@ -40,7 +40,7 @@ service cloud.firestore {
     }
 
     function isValidMessageType(msgType) {
-      return msgType in ['text', 'image', 'file', 'ai', 'system'];
+      return msgType in ['text', 'image', 'file', 'ai', 'system', 'media'];
     }
 
     function onlyKeysChanged(allowed) {
@@ -48,16 +48,16 @@ service cloud.firestore {
     }
 
     function isValidMessageCreate(roomId) {
-      return request.resource.data.senderId == request.auth.uid
-        && request.resource.data.roomId == roomId
-        && request.resource.data.clientId is string
-        && request.resource.data.clientId.size() > 0
-        && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 4000
-        && isValidMessageType(request.resource.data.type)
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.deleted == false;
+      let d = request.resource.data;
+      let isMedia = d.type == 'media';
+      return (d.senderId == request.auth.uid || d.uid == request.auth.uid)
+        && isValidMessageType(d.type)
+        && d.clientId is string
+        && d.clientId.size() > 0
+        && d.text is string
+        && (isMedia || (d.text.size() > 0 && d.text.size() <= 4000))
+        && d.createdAt is timestamp
+        && d.deleted == false;
     }
 
     // Users
@@ -313,21 +313,22 @@ service cloud.firestore {
     }
 
     function isLegacyMessageCreate() {
+      let d = request.resource.data;
+      let isMedia = d.type == 'media';
       return (
-        request.resource.data.type == 'system'
-        && request.resource.data.uid == 'system'
-        && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
+        d.type == 'system'
+        && d.uid == 'system'
+        && d.text is string
+        && d.text.size() > 0
       ) || (
-        request.resource.data.encrypted == true
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 1400
-        && request.resource.data.type is string
+        d.encrypted == true
+        && d.uid == request.auth.uid
+        && d.text is string
+        && (isMedia || (d.text.size() > 0 && d.text.size() <= 1400))
+        && d.type is string
         && (
-          !('pinned' in request.resource.data)
-          || request.resource.data.pinned == false
+          !('pinned' in d)
+          || d.pinned == false
         )
       );
     }
@@ -338,8 +339,45 @@ service cloud.firestore {
     }
 
     function isLegacyMessageUpdate(chatId) {
-      let allowed = ['reactions', 'deliveredTo', 'readBy', 'hiddenFor', 'pinned', 'pinnedAt', 'bookmarkedBy'];
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed)
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let isOwner = resource.data.uid == request.auth.uid || resource.data.senderId == request.auth.uid;
+
+      // Non-destructive interaction updates.
+      let interactionUpdate = changed.hasOnly([
+        'reactions',
+        'deliveredTo',
+        'deliveredAt',
+        'readBy',
+        'readAt',
+        'hiddenFor',
+        'pinned',
+        'pinnedAt',
+        'bookmarkedBy',
+        'bookmarkedAt'
+      ]);
+
+      // "Delete for me" persistence.
+      let selfHideUpdate = changed.hasOnly(['deletedFor', 'updatedAt'])
+        && request.resource.data.deletedFor[request.auth.uid] == true;
+
+      // "Delete for everyone" soft delete. Only message owner can do this.
+      let deleteForEveryoneUpdate = isOwner && changed.hasOnly([
+        'text',
+        'encrypted',
+        'type',
+        'deletedForEveryone',
+        'deletedAt',
+        'editedAt',
+        'mediaObjectPath',
+        'mediaKey',
+        'mediaName',
+        'mediaMime',
+        'mediaSize'
+      ]);
+
+      return interactionUpdate
+        || selfHideUpdate
+        || deleteForEveryoneUpdate
         || isPlatformAdmin()
         || canModerateChat(chatId);
     }

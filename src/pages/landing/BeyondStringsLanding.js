@@ -165,20 +165,23 @@ const BeyondStringsLanding = ({ onSignIn, onSignUp, onSelectAction, themeMode = 
 
         @keyframes marquee {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-100%); }
+          100% { transform: translateX(-33.3333%); }
         }
 
         .marquee-container {
           position: relative;
           overflow: hidden;
           width: 100%;
+          /* fade edges */
+          -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
         }
 
         .marquee-content {
           display: flex;
           width: max-content;
           will-change: transform;
-          animation: marquee 30s linear infinite;
+          animation: marquee 40s linear infinite;
           gap: 2rem;
         }
 

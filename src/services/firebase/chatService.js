@@ -252,12 +252,13 @@ export async function sendRoomMessage(roomId, payload, options) {
     const safeClientId = String(payload?.clientId || '').trim();
     const safeType = payload?.type || 'text';
     const isEncrypted = Boolean(payload?.encrypted);
+    const isMediaMessage = safeType === 'media';
 
     if (!safeUid) {
         throw new Error('Authenticated uid is required.');
     }
 
-    if (!safeText) {
+    if (!isMediaMessage && !safeText) {
         throw new Error('Message cannot be empty.');
     }
 
@@ -279,10 +280,18 @@ export async function sendRoomMessage(roomId, payload, options) {
         sender: String(payload?.sender || '').trim() || null,
         senderEnc: safeSenderEncrypted || null,
         uid: safeUid,
+        senderId: safeUid,
         type: safeType,
-        clientId: safeClientId || null,
+        clientId: safeClientId || `${safeUid}-${Date.now()}`,
+        deleted: false,
         tags: Array.isArray(payload?.tags) ? payload.tags.slice(0, 8) : [],
         moderation: payload?.moderation && typeof payload.moderation === 'object' ? payload.moderation : null,
+        // Media fields (populated only for type === 'media')
+        mediaObjectPath: payload?.mediaObjectPath ? String(payload.mediaObjectPath).slice(0, 1024) : null,
+        mediaKey: payload?.mediaKey ? String(payload.mediaKey).slice(0, 512) : null,
+        mediaName: payload?.mediaName ? String(payload.mediaName).slice(0, 255) : null,
+        mediaMime: payload?.mediaMime ? String(payload.mediaMime).slice(0, 128) : null,
+        mediaSize: Number.isFinite(payload?.mediaSize) ? payload.mediaSize : null,
         reactions: {},
         encrypted: true,
         cipherVersion: payload?.cipherVersion || null,
@@ -298,7 +307,7 @@ export async function sendRoomMessage(roomId, payload, options) {
     const roomActivityUpdate = {
         updatedAt: serverTimestamp(),
         lastMessageAt: serverTimestamp(),
-        lastMessageText: safeType === 'text' ? safeText.slice(0, 140) : `[${safeType}]`,
+        lastMessageText: safeType === 'text' ? safeText.slice(0, 140) : safeType === 'media' ? `📎 ${String(payload?.mediaName || 'Media').slice(0, 60)}` : `[${safeType}]`,
         lastSenderId: safeUid,
         lastSenderName: String(payload?.sender || '').trim() || ''
     };

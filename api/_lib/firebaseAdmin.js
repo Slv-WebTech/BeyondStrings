@@ -32,7 +32,8 @@ export function getFirebaseAdminApp() {
             projectId: config.projectId,
             clientEmail: config.clientEmail,
             privateKey: config.privateKey
-        })
+        }),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${config.projectId}.appspot.com`
     });
 }
 

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { getHighlightParts } from '../../../utils/highlight';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Check, CheckCheck, ChevronDown, FileText, Info, Mic, Phone, Play, SmilePlus, Video } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, Download, FileText, Image, Info, Mic, Music, Phone, Play, SmilePlus, Video, WifiOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import EmojiPicker from 'emoji-picker-react';
 import { classifyMessage, getCallDetails, getMediaLabel, getResolvableMediaSource, getVoiceDuration } from '../../../utils/messageTypes';
+import { fetchAndDecryptMedia, buildStorageDownloadUrl } from '../../../services/media/mediaUploadService';
 
 function MessageHighlight({ message, query, reduceMotion }) {
     return (
@@ -49,10 +50,157 @@ function VoiceBubble({ message, reduceMotion }) {
     );
 }
 
+function EncryptedMediaBubble({ message, reduceMotion }) {
+    const [objectUrl, setObjectUrl] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const urlRef = useRef(null);
+    const mediaMime = String(message?.mediaMime || '');
+    const mediaName = String(message?.mediaName || 'file');
+    const isImage = mediaMime.startsWith('image/');
+    const isAudio = mediaMime.startsWith('audio/');
+    const isVideo = mediaMime.startsWith('video/');
+
+    useEffect(() => {
+        return () => {
+            if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        };
+    }, []);
+
+    async function load() {
+        if (objectUrl || loading) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const downloadUrl = buildStorageDownloadUrl(message.mediaObjectPath);
+            if (!downloadUrl) throw new Error('Storage not configured.');
+            const url = await fetchAndDecryptMedia(downloadUrl, message.mediaKey, mediaMime);
+            urlRef.current = url;
+            setObjectUrl(url);
+        } catch (err) {
+            setError(err.message || 'Failed to decrypt media.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const wrapClass = 'w-[70vw] max-w-[280px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white/65 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/45 sm:max-w-[320px]';
+
+    if (loading) {
+        return (
+            <div className={wrapClass}>
+                <div className="flex items-center justify-center gap-2 p-5 text-sm text-[var(--text-muted)]">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Decrypting…
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={wrapClass}>
+                <div className="flex items-center gap-2 p-4 text-xs text-rose-400">
+                    <WifiOff size={14} /> {error}
+                </div>
+            </div>
+        );
+    }
+
+    if (objectUrl) {
+        if (isImage) {
+            return (
+                <motion.div whileHover={reduceMotion ? undefined : { scale: 1.02 }}>
+                    <div className={wrapClass}>
+                        <img src={objectUrl} alt={mediaName} loading="lazy" className="h-auto max-h-72 w-full object-cover" />
+                        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                            <p className="text-xs font-medium text-[var(--text-muted)] truncate">{mediaName}</p>
+                            <a href={objectUrl} download={mediaName} className="text-xs font-semibold text-[var(--accent)]" aria-label="Download">
+                                <Download size={12} />
+                            </a>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+
+        if (isAudio) {
+            return (
+                <div className={clsx(wrapClass, 'p-3')}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                            <Music size={14} className="text-[var(--accent)]" />
+                        </span>
+                        <p className="text-xs font-medium text-[var(--text-main)] truncate flex-1">{mediaName}</p>
+                        <a href={objectUrl} download={mediaName} aria-label="Download"><Download size={12} className="text-[var(--text-muted)]" /></a>
+                    </div>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <audio controls src={objectUrl} className="w-full h-8 rounded-lg" style={{ colorScheme: 'dark' }} />
+                </div>
+            );
+        }
+
+        if (isVideo) {
+            return (
+                <div className={clsx(wrapClass, 'p-2')}>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video controls src={objectUrl} className="w-full rounded-xl max-h-52 object-cover" playsInline />
+                    <div className="flex items-center justify-between gap-2 px-1 py-1.5">
+                        <p className="text-xs text-[var(--text-muted)] truncate">{mediaName}</p>
+                        <a href={objectUrl} download={mediaName} aria-label="Download"><Download size={12} className="text-[var(--text-muted)]" /></a>
+                    </div>
+                </div>
+            );
+        }
+
+        // Generic file
+        return (
+            <div className={clsx(wrapClass, 'p-3')}>
+                <div className="flex items-center gap-3">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                        <FileText size={18} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate text-[var(--text-main)]">{mediaName}</p>
+                        <a href={objectUrl} download={mediaName} className="text-xs text-[var(--accent)]">Download</a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Not loaded yet — show tap-to-load preview
+    const Icon = isImage ? Image : isAudio ? Music : isVideo ? Video : FileText;
+    return (
+        <motion.div whileHover={reduceMotion ? undefined : { scale: 1.02 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }}>
+            <button
+                type="button"
+                onClick={load}
+                className={clsx(wrapClass, 'block w-full text-left p-3 transition-colors hover:bg-white/80 dark:hover:bg-slate-900/60')}
+            >
+                <div className="flex items-center gap-3">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/10 text-[var(--accent)]">
+                        <Icon size={18} />
+                    </span>
+                    <div>
+                        <p className="text-sm font-semibold text-[var(--text-main)] truncate max-w-[160px]">{mediaName}</p>
+                        <p className="text-xs text-[var(--text-muted)]">Tap to decrypt &amp; view</p>
+                    </div>
+                </div>
+            </button>
+        </motion.div>
+    );
+}
+
 function MediaBubble({ message, reduceMotion }) {
+    // Native encrypted media (uploaded via BeyondStrings)
+    if (message?.mediaObjectPath && message?.mediaKey) {
+        return <EncryptedMediaBubble message={message} reduceMotion={reduceMotion} />;
+    }
+
     const mediaSource = getResolvableMediaSource(message);
 
-    if (mediaSource) {
+    if (mediaSource && mediaSource !== '__encrypted_media__') {
         return (
             <motion.div whileHover={reduceMotion ? undefined : { scale: 1.02 }} whileTap={reduceMotion ? undefined : { scale: 0.99 }}>
                 <div className="w-[70vw] max-w-[280px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white/65 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-900/45 sm:max-w-[320px]">

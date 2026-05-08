@@ -531,6 +531,12 @@ export function mapLiveMessageToUiMessage(entry, secret, viewerUserId, resolveSe
         deliveredTo,
         readBy,
         deliveryStatus,
-        hiddenForCurrentUser
+        hiddenForCurrentUser,
+        // Encrypted media fields (populated for type === 'media')
+        mediaObjectPath: entry?.mediaObjectPath || null,
+        mediaKey: entry?.mediaKey || null,
+        mediaMime: entry?.mediaMime || null,
+        mediaName: entry?.mediaName || null,
+        mediaSize: entry?.mediaSize || null,
     };
 }

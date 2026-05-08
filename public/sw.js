@@ -27,6 +27,35 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+function resolveAbsoluteUrl(url) {
+    if (!url) return undefined;
+    try {
+        // Already absolute
+        if (/^https?:\/\//i.test(url)) return url;
+        // Resolve relative to SW origin
+        return new URL(url, self.location.origin).href;
+    } catch {
+        return url;
+    }
+}
+
+function buildNotificationOptions(payload) {
+    const options = {
+        body: String(payload.body || ''),
+        tag: payload.tag || undefined,
+        renotify: Boolean(payload.renotify),
+        silent: false,
+        data: payload.data || {}
+    };
+
+    const icon = resolveAbsoluteUrl(payload.icon);
+    const badge = resolveAbsoluteUrl(payload.badge);
+    if (icon) options.icon = icon;
+    if (badge) options.badge = badge;
+
+    return options;
+}
+
 self.addEventListener('message', (event) => {
     if (event.data?.type === 'SKIP_WAITING') {
         self.skipWaiting();
@@ -36,14 +65,7 @@ self.addEventListener('message', (event) => {
     if (event.data?.type === 'SHOW_NOTIFICATION') {
         const payload = event.data?.payload || {};
         const title = String(payload.title || 'New message');
-        const options = {
-            body: String(payload.body || ''),
-            icon: payload.icon,
-            badge: payload.badge,
-            tag: payload.tag,
-            renotify: Boolean(payload.renotify),
-            data: payload.data || {}
-        };
+        const options = buildNotificationOptions(payload);
 
         event.waitUntil(self.registration.showNotification(title, options));
     }
@@ -52,10 +74,15 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
-    const targetUrl = String(event.notification?.data?.url || './');
+    // Always use an absolute URL so Edge and other browsers can open the window correctly.
+    let targetUrl = String(event.notification?.data?.url || '');
+    if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = new URL(targetUrl || '/', self.location.origin).href;
+    }
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-            const existing = windowClients.find((client) => client.url.includes(self.location.origin));
+            const existing = windowClients.find((client) => client.url.startsWith(self.location.origin));
 
             if (existing) {
                 return existing.focus().then(() => existing.navigate(targetUrl));
@@ -142,13 +169,20 @@ self.addEventListener('push', (event) => {
     }
 
     const title = String(payload?.notification?.title || payload?.title || 'BeyondStrings');
+    const rawIcon = payload?.notification?.icon || payload?.icon;
+    const rawBadge = payload?.notification?.badge || payload?.badge;
+
     const options = {
         body: String(payload?.notification?.body || payload?.body || 'You have a new message.'),
-        icon: payload?.notification?.icon || payload?.icon,
-        badge: payload?.notification?.badge || payload?.badge,
         tag: payload?.notification?.tag || payload?.tag || 'beyondstrings-push',
+        silent: false,
         data: payload?.data || { url: './' }
     };
+
+    const icon = resolveAbsoluteUrl(rawIcon);
+    const badge = resolveAbsoluteUrl(rawBadge);
+    if (icon) options.icon = icon;
+    if (badge) options.badge = badge;
 
     event.waitUntil(self.registration.showNotification(title, options));
 });

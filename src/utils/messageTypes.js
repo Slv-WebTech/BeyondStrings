@@ -9,6 +9,11 @@ export function classifyMessage(message) {
         return 'system';
     }
 
+    // Native encrypted media upload
+    if (message?.type === 'media' && message?.mediaObjectPath) {
+        return 'media';
+    }
+
     if (
         content.includes('missed voice call') ||
         content.includes('missed video call') ||
@@ -79,6 +84,11 @@ export function getVoiceDuration(message) {
 }
 
 export function getResolvableMediaSource(message) {
+    // Native media messages have a mediaObjectPath + mediaKey — URL is resolved async
+    if (message?.mediaObjectPath && message?.mediaKey) {
+        return '__encrypted_media__';
+    }
+
     const content = String(message?.message || '');
     const dataUrlMatch = content.match(/data:image\/[a-zA-Z0-9+.-]+;base64,[a-zA-Z0-9+/=\s]+/);
     if (dataUrlMatch) {

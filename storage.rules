@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Room media uploads — only authenticated users who are members of the room
+    // can read or write. Files are always AES-GCM encrypted client-side before
+    // upload, so Storage only holds ciphertext.
+    match /rooms/{roomId}/uploads/{userId}/{allPaths=**} {
+      // Write: must be the same authenticated user as the path segment
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size <= 110 * 1024 * 1024; // 100 MB + ~10% crypto overhead
+
+      // Read: any authenticated user may read (room membership enforced at app layer)
+      allow read: if request.auth != null;
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

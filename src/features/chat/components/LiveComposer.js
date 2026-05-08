@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, LoaderCircle, Lock, Mic, Send, Smile, Sparkles, Wifi, WifiOff, WandSparkles, X } from 'lucide-react';
+import { FileText, Image, LoaderCircle, Lock, Mic, Paperclip, Send, Smile, Sparkles, Wifi, WifiOff, WandSparkles, X } from 'lucide-react';
 import { Button } from '../../../shared/components/UI/button';
 import BottomSheet from './BottomSheet';
 
@@ -7,6 +7,7 @@ function LiveComposer({
     messageValue,
     onMessageChange,
     onSendMessage,
+    onSendMedia,
     typingText,
     disabled,
     isSending,
@@ -22,6 +23,9 @@ function LiveComposer({
     onCancelReply
 }) {
     const [emojiSheetOpen, setEmojiSheetOpen] = useState(false);
+    const [mediaSheetOpen, setMediaSheetOpen] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(null);
+    const fileInputRef = useRef(null);
     const QUICK_COMMANDS = [
         { value: '@AI summarize', icon: Sparkles, label: 'Summarize' },
         { value: '@AI explain', icon: WandSparkles, label: 'Explain' },
@@ -161,6 +165,42 @@ function LiveComposer({
                             >
                                 <Smile size={15} />
                             </button>
+                            {typeof onSendMedia === 'function' ? (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isSending || uploadProgress !== null}
+                                        className="live-composer-attach-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-100/24 bg-white/10 text-slate-100 transition-colors hover:bg-sky-500/25 hover:border-sky-300/45 hover:text-sky-100 disabled:opacity-50"
+                                        title="Attach media"
+                                        aria-label="Attach media"
+                                    >
+                                        {uploadProgress !== null ? (
+                                            <span className="text-[9px] font-bold leading-none">{uploadProgress}%</span>
+                                        ) : (
+                                            <Paperclip size={15} />
+                                        )}
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*,audio/*,video/*"
+                                        className="sr-only"
+                                        aria-hidden="true"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            e.target.value = '';
+                                            if (!file) return;
+                                            setUploadProgress(0);
+                                            try {
+                                                await onSendMedia(file, (pct) => setUploadProgress(pct));
+                                            } finally {
+                                                setUploadProgress(null);
+                                            }
+                                        }}
+                                    />
+                                </>
+                            ) : null}
                         </div>
 
                         <textarea
@@ -203,7 +243,14 @@ function LiveComposer({
 
             <BottomSheet open={emojiSheetOpen} onOpenChange={setEmojiSheetOpen} title="Emoji picker">
                 <div className="grid grid-cols-8 gap-2">
-                    {['≡ƒÿÇ', '≡ƒÿü', '≡ƒÿé', '≡ƒÿì', '≡ƒñö', '≡ƒöÑ', '≡ƒæÅ', '≡ƒæì', 'Γ¥ñ∩╕Å', '≡ƒÄë', '≡ƒÖÅ', '≡ƒÜÇ', '≡ƒÿÄ', '≡ƒÑ│', '≡ƒÿ«', '≡ƒÿà'].map((emoji) => (
+                    {[
+                        '😀', '😂', '😍', '😎', '🤔', '🙄', '🥰', '🥲',
+                        '❤️', '😭', '🔥', '💯', '👍', '🎉', '😊', '😢',
+                        '😡', '😱', '🤩', '🥳', '😴', '🤗', '😏', '🫡',
+                        '👋', '🙏', '💪', '🫶', '👀', '🤝', '✌️', '🫂',
+                        '🎶', '🌟', '💥', '✨', '🌈', '🍕', '🎮', '🚀',
+                        '😤', '🤭', '🫠', '😶', '🫣', '🤫', '🫤', '😬',
+                    ].map((emoji) => (
                         <button
                             key={emoji}
                             type="button"

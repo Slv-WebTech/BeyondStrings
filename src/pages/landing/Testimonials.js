@@ -14,7 +14,7 @@ const Testimonials = ({ className = '' }) => {
 
         <div className="marquee-container">
           <div className="marquee-content">
-            {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, index) => (
+            {[...TESTIMONIALS, ...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, index) => (
               <GlassCard
                 key={`${index}-${testimonial.author}`}
                 className="marquee-item min-w-[340px] md:min-w-[420px] transition-all duration-500"

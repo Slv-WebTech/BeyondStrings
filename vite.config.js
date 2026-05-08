@@ -15,25 +15,35 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 output: {
                     manualChunks(id) {
-                        if (id.includes('node_modules/firebase')) {
-                            return 'vendor-firebase';
-                        }
+                        // ── Vendor splits ─────────────────────────────────────
+                        if (id.includes('node_modules/firebase')) return 'vendor-firebase';
+                        if (id.includes('node_modules/recharts')) return 'vendor-recharts';
+                        if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion')) return 'vendor-motion';
+                        if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
+                        if (id.includes('node_modules/react-virtuoso')) return 'vendor-chat-virtualization';
+                        if (id.includes('node_modules/emoji-picker-react')) return 'vendor-emoji';
 
-                        if (id.includes('node_modules/recharts')) {
-                            return 'vendor-recharts';
-                        }
+                        // ── App-level feature splits ───────────────────────────
+                        if (/[\\/]src[\\/]pages[\\/]Admin\.js$/.test(id)) return 'page-admin';
+                        if (/[\\/]src[\\/]pages[\\/]Chat\.js$/.test(id)) return 'page-chat';
+                        if (/[\\/]src[\\/]pages[\\/]landing[\\/]/.test(id)) return 'app-landing';
+                        if (/[\\/]src[\\/]features[\\/]ai[\\/]/.test(id)) return 'app-ai';
 
-                        if (id.includes('node_modules/framer-motion')) {
-                            return 'vendor-motion';
+                        // ── Chat feature: split into sub-chunks ───────────────
+                        // Secondary panels (lazy-loaded in-chat views)
+                        if (/[\\/]src[\\/]features[\\/]chat[\\/]components[\\/](GroupSettingsPanel|JoinRequestsPanel|ChatInsights|ReplayControls|AISidePanel)/.test(id)) {
+                            return 'app-chat-panels';
                         }
-
-                        if (id.includes('node_modules/lucide-react')) {
-                            return 'vendor-icons';
+                        // Composer (pulls in emoji picker logic and media utils)
+                        if (/[\\/]src[\\/]features[\\/]chat[\\/]components[\\/]LiveComposer/.test(id)) {
+                            return 'app-chat-composer';
                         }
-
-                        if (id.includes('node_modules/react-virtuoso')) {
-                            return 'vendor-chat-virtualization';
+                        // Core chat runtime: hooks + services + helpers
+                        if (/[\\/]src[\\/]features[\\/]chat[\\/](hooks|services|utils|appRuntimeHelpers)/.test(id)) {
+                            return 'app-chat-core';
                         }
+                        // Remaining chat components (ChatBubble, ChatHeader, etc.)
+                        if (/[\\/]src[\\/]features[\\/]chat[\\/]/.test(id)) return 'app-chat-ui';
 
                         return undefined;
                     }
@@ -43,7 +53,14 @@ export default defineConfig(({ mode }) => {
         plugins: [react()],
         server: {
             port: 5173,
-            strictPort: false
+            strictPort: false,
+            proxy: {
+                // Forward /api/* to the local Vercel dev server (npm run dev:full)
+                '/api': {
+                    target: 'http://localhost:3000',
+                    changeOrigin: true
+                }
+            }
         },
         esbuild: {
             loader: 'jsx',

@@ -54,6 +54,7 @@ import { groupMessages } from '../utils/groupMessages';
 import { includesQuery } from '../utils/highlight';
 import { parseWhatsAppChat } from '../utils/parser';
 import { encryptMessage } from '../utils/encryption';
+import { encryptAndUploadFile, buildStorageDownloadUrl } from '../services/media/mediaUploadService';
 import { PRESET_CHAT_BACKGROUNDS } from '../utils/chatBackgrounds';
 import { BRAND } from '../config/branding';
 import sampleChatText from '../components/Assets/sample chat.txt?raw';
@@ -543,8 +544,8 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
             },
             tag: `room-${String(roomId || '').trim()}`,
             renotify: true,
-            icon: `${import.meta.env.BASE_URL}web-app-manifest-192x192.png`,
-            badge: `${import.meta.env.BASE_URL}favicon-32x32.png`
+            icon: `${window.location.origin}${import.meta.env.BASE_URL}web-app-manifest-192x192.png`,
+            badge: `${window.location.origin}${import.meta.env.BASE_URL}favicon-32x32.png`
         };
 
         try {
@@ -2351,6 +2352,41 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         }
     };
 
+    const handleSendMediaMessage = async (file, onProgress) => {
+        if (!firebaseReady || !authUid || !roomId) return;
+        if (!isOnline) {
+            setFirebaseError('Media upload requires an internet connection.');
+            return;
+        }
+        setIsSending(true);
+        setFirebaseError('');
+        try {
+            const result = await encryptAndUploadFile(file, roomId, { onProgress });
+            const payload = {
+                type: 'media',
+                text: '',
+                uid: authUid,
+                clientId: `${authUid}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                encrypted: true,
+                cipherVersion: 'media-aes-gcm-v1',
+                sender: currentUser.trim(),
+                mediaObjectPath: result.objectPath,
+                mediaKey: result.mediaKey,
+                mediaName: result.mediaName,
+                mediaMime: result.mediaMime,
+                mediaSize: result.mediaSize,
+                timestamp: new Date().toISOString()
+            };
+            await ensureChatDocument(roomId, authUid);
+            await sendRoomMessage(roomId, payload);
+            trackEvent('media_sent', { chatType: isGroupChat ? 'group' : 'direct', mimeType: result.mediaMime });
+        } catch (err) {
+            setFirebaseError(err?.message || 'Media upload failed. Please try again.');
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     const handleClearChat = async () => {
         if (!firebaseReady) {
             setFirebaseError('Firebase config is missing. Add PUBLIC_FIREBASE_* values.');
@@ -3562,6 +3598,7 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                                 messageValue={draftMessage}
                                 onMessageChange={handleLiveDraftChange}
                                 onSendMessage={handleSendLiveMessage}
+                                onSendMedia={handleSendMediaMessage}
                                 typingText={typingIndicatorText}
                                 disabled={!draftMessage.trim() || !firebaseReady}
                                 isSending={isSending}

@@ -9,8 +9,24 @@ function sanitizeFileName(fileName) {
         .slice(0, 120);
 }
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([
+    // Images
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+    // Audio
+    'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/aac', 'audio/flac',
+    // Video
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+    // Documents
+    'application/pdf'
+]);
+
+const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB for video; encrypted overhead is ~33% larger
+
+function getMaxSizeForType(contentType) {
+    if (contentType.startsWith('video/')) return 100 * 1024 * 1024;
+    if (contentType.startsWith('audio/')) return 25 * 1024 * 1024;
+    return 10 * 1024 * 1024; // images / pdf
+}
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -34,7 +50,7 @@ export default async function handler(req, res) {
     if (!ALLOWED_TYPES.has(contentType)) {
         return res.status(400).json({ error: 'Unsupported file type.' });
     }
-    if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE_BYTES) {
+    if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > getMaxSizeForType(contentType)) {
         return res.status(400).json({ error: 'File size exceeds allowed limit.' });
     }
 
@@ -44,17 +60,21 @@ export default async function handler(req, res) {
         const objectPath = `rooms/${roomId}/uploads/${user.uid}/${Date.now()}-${fileName}`;
         const file = bucket.file(objectPath);
 
+        // Always sign for application/octet-stream — the client uploads the
+        // AES-GCM encrypted blob regardless of the original file type.
+        // The original contentType is validated above and stored in the message
+        // payload (mediaMime) so the receiver knows how to render after decryption.
         const [signedUrl] = await file.getSignedUrl({
             version: 'v4',
             action: 'write',
             expires: Date.now() + 15 * 60 * 1000,
-            contentType
+            contentType: 'application/octet-stream'
         });
 
         return res.status(200).json({
             uploadUrl: signedUrl,
             objectPath,
-            maxBytes: MAX_FILE_SIZE_BYTES
+            maxBytes: getMaxSizeForType(contentType)
         });
     } catch (error) {
         console.error('[storage/upload-url]', error.message);
