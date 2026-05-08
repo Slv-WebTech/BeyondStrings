@@ -54,12 +54,12 @@ const ProductShowcase = ({ className = '' }) => {
                 )}>
                   {module.label}
                 </span>
-                <h4 className={cn(
+                <h3 className={cn(
                   'text-lg font-semibold mb-3 transition-all duration-300',
                   activeModule === index ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'
                 )}>
                   {module.title}
-                </h4>
+                </h3>
                 <p className={cn(
                   'text-sm transition-all duration-300 leading-relaxed',
                   activeModule === index ? 'text-[var(--text-muted)]' : 'text-zinc-500 group-hover:text-zinc-400'

@@ -12,11 +12,18 @@ export default defineConfig(({ mode }) => {
             __APP_VERSION__: JSON.stringify(appVersion)
         },
         build: {
+            target: 'es2020',
+            cssCodeSplit: true,
             rollupOptions: {
                 output: {
                     manualChunks(id) {
-                        // ── Vendor splits ─────────────────────────────────────
-                        if (id.includes('node_modules/firebase')) return 'vendor-firebase';
+                        // ── Firebase sub-splits (530 KiB → 3 cacheable chunks) ─
+                        if (id.includes('@firebase/auth') || (id.includes('node_modules/firebase') && id.includes('/auth'))) return 'vendor-firebase-auth';
+                        if (id.includes('@firebase/firestore') || (id.includes('node_modules/firebase') && id.includes('/firestore'))) return 'vendor-firebase-firestore';
+                        if (id.includes('@firebase/storage') || (id.includes('node_modules/firebase') && id.includes('/storage'))) return 'vendor-firebase-storage';
+                        if (id.includes('node_modules/firebase') || id.includes('@firebase/')) return 'vendor-firebase-core';
+
+                        // ── Other vendor splits ────────────────────────────────
                         if (id.includes('node_modules/recharts')) return 'vendor-recharts';
                         if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion')) return 'vendor-motion';
                         if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
@@ -30,19 +37,15 @@ export default defineConfig(({ mode }) => {
                         if (/[\\/]src[\\/]features[\\/]ai[\\/]/.test(id)) return 'app-ai';
 
                         // ── Chat feature: split into sub-chunks ───────────────
-                        // Secondary panels (lazy-loaded in-chat views)
                         if (/[\\/]src[\\/]features[\\/]chat[\\/]components[\\/](GroupSettingsPanel|JoinRequestsPanel|ChatInsights|ReplayControls|AISidePanel)/.test(id)) {
                             return 'app-chat-panels';
                         }
-                        // Composer (pulls in emoji picker logic and media utils)
                         if (/[\\/]src[\\/]features[\\/]chat[\\/]components[\\/]LiveComposer/.test(id)) {
                             return 'app-chat-composer';
                         }
-                        // Core chat runtime: hooks + services + helpers
                         if (/[\\/]src[\\/]features[\\/]chat[\\/](hooks|services|utils|appRuntimeHelpers)/.test(id)) {
                             return 'app-chat-core';
                         }
-                        // Remaining chat components (ChatBubble, ChatHeader, etc.)
                         if (/[\\/]src[\\/]features[\\/]chat[\\/]/.test(id)) return 'app-chat-ui';
 
                         return undefined;
@@ -65,7 +68,8 @@ export default defineConfig(({ mode }) => {
         esbuild: {
             loader: 'jsx',
             include: /src[/\\].*\.jsx?$/,
-            exclude: []
+            exclude: [],
+            drop: mode === 'production' ? ['console', 'debugger'] : []
         },
         optimizeDeps: {
             esbuildOptions: {

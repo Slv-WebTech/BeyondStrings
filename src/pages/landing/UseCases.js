@@ -41,12 +41,12 @@ const UseCases = ({ className = '' }) => {
                 `[&.animate-in]:opacity-100 [&.animate-in]:translate-y-0 [&.animate-in]:delay-[${Math.min(index * 80, 300)}ms]`
               )}
             >
-              <h4 className={cn(
+              <h3 className={cn(
                 'text-lg font-semibold mb-5 transition-colors duration-300',
                 useCase.color === 'primary' ? 'text-[#00f0ff]' : 'text-[#d0bcff]'
               )}>
                 {useCase.title}
-              </h4>
+              </h3>
               <p className="text-sm text-[var(--text-muted)] leading-relaxed">
                 {useCase.description}
               </p>

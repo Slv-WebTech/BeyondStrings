@@ -67,7 +67,7 @@ const ValueProps = ({ className = '' }) => {
               )}>
                 <MaterialIcon icon={prop.icon} className={prop.color} size={28} />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-[var(--text-main)]">{prop.title}</h3>
+              <h2 className="text-xl font-semibold mb-4 text-[var(--text-main)]">{prop.title}</h2>
               <p className="text-[var(--text-muted)] text-sm leading-relaxed">{prop.description}</p>
             </GlassCard>
           ))}
