@@ -32,6 +32,7 @@ const HeroSection = ({ className = '', onSignIn, onSignUp, themeMode = 'dark' })
     <section
       id="hero"
       ref={sectionRef}
+      aria-label="Hero — Go Beyond Conversations"
       className={cn('relative pt-24 pb-16 md:pt-32 md:pb-24', className)}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

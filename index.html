@@ -4,62 +4,233 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description"
-        content="BeyondStrings helps teams and communities chat securely with real-time messaging, replay controls, and AI-powered insights in a privacy-first experience." />
-    <meta name="keywords"
-        content="encrypted chat, private messaging, team communication, real-time chat, AI chat insights, secure collaboration" />
+
+    <!-- Core identity -->
+    <title>BeyondStrings | Secure Real-Time Chat with AI Insights</title>
+    <meta name="application-name" content="BeyondStrings" />
     <meta name="author" content="BeyondStrings" />
+    <meta name="description"
+        content="BeyondStrings is a privacy-first real-time chat platform with encrypted messaging, AI-powered conversation insights, replay controls, and team collaboration tools. Free to start." />
+    <meta name="keywords"
+        content="encrypted chat app, secure messaging platform, real-time team chat, AI chat insights, private group chat, conversation replay, encrypted media sharing, team communication tool" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <meta property="og:title" content="BeyondStrings | Secure Real-Time Chat" />
-    <meta property="og:description"
-        content="Privacy-first real-time chat with replay controls, encrypted media, and AI-powered conversation insights." />
-    <meta property="og:url" content="https://beyondstrings.app/" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BeyondStrings" />
     <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://beyondstrings.app/" />
+    <meta property="og:title" content="BeyondStrings | Secure Real-Time Chat with AI Insights" />
+    <meta property="og:description"
+        content="Privacy-first real-time chat with encrypted media, replay controls, and AI-powered conversation insights. Free to start — no credit card required." />
     <meta property="og:image" content="https://beyondstrings.app/og-image.svg" />
-    <meta property="og:image:alt" content="BeyondStrings secure chat platform" />
-    <meta property="og:type" content="website" />
+    <meta property="og:image:alt" content="BeyondStrings — Secure Real-Time Chat Platform" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/svg+xml" />
+
+    <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="BeyondStrings | Secure Real-Time Chat" />
+    <meta name="twitter:site" content="@beyondstrings" />
+    <meta name="twitter:creator" content="@beyondstrings" />
+    <meta name="twitter:title" content="BeyondStrings | Secure Real-Time Chat with AI Insights" />
     <meta name="twitter:description"
-        content="Privacy-first real-time chat with replay controls, encrypted media, and AI-powered conversation insights." />
+        content="Privacy-first real-time chat with encrypted media, replay controls, and AI-powered conversation insights." />
     <meta name="twitter:image" content="https://beyondstrings.app/og-image.svg" />
+    <meta name="twitter:image:alt" content="BeyondStrings secure chat platform preview" />
+
+    <!-- PWA / Mobile -->
     <meta name="theme-color" content="#1f8f63" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="BeyondStrings" />
-    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Resource hints — fonts used in landing page JSX get preconnected here -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- Canonical + i18n -->
     <link rel="canonical" href="https://beyondstrings.app/" />
     <link rel="alternate" hreflang="en" href="https://beyondstrings.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://beyondstrings.app/" />
+
+    <!-- Favicons + Manifest -->
     <link id="app-favicon" rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link id="app-favicon-shortcut" rel="shortcut icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="icon" type="image/png" sizes="96x96" href="./favicon-96x96.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./site.webmanifest" />
-    <title>BeyondStrings | Secure Real-Time Chat</title>
+
+    <!-- Structured Data — @graph combines all page-level schemas -->
     <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "BeyondStrings",
-            "applicationCategory": "CommunicationApplication",
-            "operatingSystem": "Web",
-            "url": "https://beyondstrings.app/",
-            "description": "Privacy-first real-time chat with replay controls, encrypted media, and AI-powered conversation insights.",
-            "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "USD"
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://beyondstrings.app/#website",
+                "url": "https://beyondstrings.app/",
+                "name": "BeyondStrings",
+                "description": "Privacy-first real-time chat with encrypted media, replay controls, and AI-powered conversation insights.",
+                "publisher": { "@id": "https://beyondstrings.app/#organization" },
+                "inLanguage": "en-US",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": "https://beyondstrings.app/?q={search_term_string}"
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://beyondstrings.app/#organization",
+                "name": "BeyondStrings",
+                "url": "https://beyondstrings.app/",
+                "logo": {
+                    "@type": "ImageObject",
+                    "@id": "https://beyondstrings.app/#logo",
+                    "url": "https://beyondstrings.app/apple-touch-icon.png",
+                    "width": 180,
+                    "height": 180,
+                    "caption": "BeyondStrings"
+                },
+                "image": { "@id": "https://beyondstrings.app/#logo" },
+                "description": "BeyondStrings builds privacy-first real-time communication tools with AI-powered conversation intelligence.",
+                "contactPoint": {
+                    "@type": "ContactPoint",
+                    "contactType": "customer support",
+                    "email": "hello@beyondstrings.ai",
+                    "availableLanguage": "English"
+                }
+            },
+            {
+                "@type": "SoftwareApplication",
+                "@id": "https://beyondstrings.app/#product",
+                "name": "BeyondStrings",
+                "applicationCategory": "CommunicationApplication",
+                "applicationSubCategory": "Encrypted Messaging",
+                "operatingSystem": "Web, iOS, Android",
+                "url": "https://beyondstrings.app/",
+                "description": "Privacy-first real-time chat with encrypted media, replay controls, and AI-powered conversation insights.",
+                "featureList": "Encrypted real-time messaging, AI conversation insights, Conversation replay controls, Group chat with roles, Smart message search, Encrypted media sharing, Web Push notifications, Analytics dashboard",
+                "screenshot": "https://beyondstrings.app/og-image.svg",
+                "publisher": { "@id": "https://beyondstrings.app/#organization" },
+                "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": "5",
+                    "reviewCount": "3",
+                    "bestRating": "5",
+                    "worstRating": "1"
+                },
+                "offers": [
+                    {
+                        "@type": "Offer",
+                        "name": "Free",
+                        "price": "0",
+                        "priceCurrency": "USD",
+                        "description": "1,000 messages/mo, 3 integrations, Basic AI Summaries",
+                        "availability": "https://schema.org/InStock",
+                        "url": "https://beyondstrings.app/"
+                    },
+                    {
+                        "@type": "Offer",
+                        "name": "Pro",
+                        "price": "25",
+                        "priceCurrency": "USD",
+                        "description": "50,000 messages/mo, Unlimited integrations, Advanced Smart Search, API Access",
+                        "availability": "https://schema.org/InStock",
+                        "url": "https://beyondstrings.app/"
+                    },
+                    {
+                        "@type": "Offer",
+                        "name": "Premium",
+                        "price": "53",
+                        "priceCurrency": "USD",
+                        "description": "Unlimited everything, Custom Model Training, Priority Support, SSO and Enterprise Security",
+                        "availability": "https://schema.org/InStock",
+                        "url": "https://beyondstrings.app/"
+                    }
+                ]
+            },
+            {
+                "@type": "FAQPage",
+                "@id": "https://beyondstrings.app/#faq",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "Is BeyondStrings free to use?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Yes. BeyondStrings has a free plan that includes 1,000 messages per month, 3 integrations, and basic AI summaries — no credit card required."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Is BeyondStrings encrypted?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Yes. BeyondStrings encrypts messages and media to protect your conversations and private messaging workflows."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "What AI features does BeyondStrings include?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "BeyondStrings includes AI-powered conversation summaries, sentiment analysis, smart keyword search, and an insights dashboard that surfaces key topics and trends from your team communications."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Does BeyondStrings support group chats?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Yes. BeyondStrings supports group chat with role-based moderation (owner, admin, member), join requests, approval flows, and member management."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Can I replay past conversations?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Yes. BeyondStrings has a conversation replay feature that lets you relive any conversation timeline with AI-generated summaries and context tags."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Is there a mobile app for BeyondStrings?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "BeyondStrings is a Progressive Web App (PWA) that works on any device — desktop, iOS, and Android — directly from your browser with offline support."
+                        }
+                    }
+                ]
             }
-        }
+        ]
+    }
     </script>
 </head>
 
 <body>
     <div id="root"></div>
+    <!-- noscript: meaningful fallback for crawlers that don't execute JS -->
+    <noscript>
+        <div style="font-family:sans-serif;max-width:680px;margin:3rem auto;padding:1rem;line-height:1.6">
+            <h1>BeyondStrings — Secure Real-Time Chat with AI Insights</h1>
+            <p>BeyondStrings is a privacy-first real-time chat platform with encrypted messaging, AI-powered conversation insights, replay controls, and team collaboration tools.</p>
+            <p><strong>Key features:</strong> end-to-end encrypted messaging, AI conversation summaries, conversation replay, group chat with role-based moderation, smart keyword search, and an analytics dashboard.</p>
+            <p><strong>Plans:</strong> Free ($0/mo), Pro ($25/mo), Premium ($53/mo).</p>
+            <p>Please enable JavaScript to use BeyondStrings. <a href="https://beyondstrings.app/">Visit beyondstrings.app</a></p>
+        </div>
+    </noscript>
     <script type="module" src="/src/main.js"></script>
 </body>
 
