@@ -104,65 +104,163 @@ export default function RootApp() {
         const googleVerification = String(import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION || '').trim();
         const bingVerification = String(import.meta.env.PUBLIC_BING_SITE_VERIFICATION || '').trim();
 
-        const landingJsonLd = [
-            {
-                '@context': 'https://schema.org',
-                '@type': 'Organization',
-                name: 'BeyondStrings',
-                url: `${baseUrl}/`,
-                logo: `${baseUrl}/apple-touch-icon.png`,
-                description: DEFAULT_DESCRIPTION
-            },
-            {
-                '@context': 'https://schema.org',
-                '@type': 'Product',
-                name: 'BeyondStrings',
-                category: 'Communication Software',
-                image: `${baseUrl}${DEFAULT_OG_IMAGE}`,
-                description: DEFAULT_DESCRIPTION,
-                brand: {
-                    '@type': 'Brand',
-                    name: 'BeyondStrings'
-                },
-                offers: {
-                    '@type': 'Offer',
-                    price: '0',
-                    priceCurrency: 'USD',
-                    availability: 'https://schema.org/InStock',
-                    url: `${baseUrl}/`
-                }
-            },
-            {
-                '@context': 'https://schema.org',
-                '@type': 'FAQPage',
-                mainEntity: [
-                    {
-                        '@type': 'Question',
-                        name: 'Is BeyondStrings encrypted?',
-                        acceptedAnswer: {
-                            '@type': 'Answer',
-                            text: 'Yes. BeyondStrings applies encryption to protect conversation data and private messaging workflows.'
-                        }
-                    },
-                    {
-                        '@type': 'Question',
-                        name: 'Can teams use BeyondStrings for group collaboration?',
-                        acceptedAnswer: {
-                            '@type': 'Answer',
-                            text: 'Yes. The app supports direct and group conversations, moderation controls, and role-based management.'
-                        }
-                    },
-                    {
-                        '@type': 'Question',
-                        name: 'Does BeyondStrings include AI features?',
-                        acceptedAnswer: {
-                            '@type': 'Answer',
-                            text: 'Yes. BeyondStrings includes AI-powered insights and summary capabilities to help users understand conversations faster.'
-                        }
+        // @graph bundles all page schemas in one valid ld+json block.
+        // Google processes @graph correctly; bare arrays are non-standard.
+        const landingJsonLd = {
+            '@context': 'https://schema.org',
+            '@graph': [
+                {
+                    '@type': 'WebSite',
+                    '@id': `${baseUrl}/#website`,
+                    url: `${baseUrl}/`,
+                    name: 'BeyondStrings',
+                    description: DEFAULT_DESCRIPTION,
+                    publisher: { '@id': `${baseUrl}/#organization` },
+                    inLanguage: 'en-US',
+                    potentialAction: {
+                        '@type': 'SearchAction',
+                        target: {
+                            '@type': 'EntryPoint',
+                            urlTemplate: `${baseUrl}/?q={search_term_string}`
+                        },
+                        'query-input': 'required name=search_term_string'
                     }
-                ]
-            }
-        ];
+                },
+                {
+                    '@type': 'Organization',
+                    '@id': `${baseUrl}/#organization`,
+                    name: 'BeyondStrings',
+                    url: `${baseUrl}/`,
+                    logo: {
+                        '@type': 'ImageObject',
+                        '@id': `${baseUrl}/#logo`,
+                        url: `${baseUrl}/apple-touch-icon.png`,
+                        width: 180,
+                        height: 180,
+                        caption: 'BeyondStrings'
+                    },
+                    image: { '@id': `${baseUrl}/#logo` },
+                    description: DEFAULT_DESCRIPTION,
+                    contactPoint: {
+                        '@type': 'ContactPoint',
+                        contactType: 'customer support',
+                        email: 'hello@beyondstrings.ai',
+                        availableLanguage: 'English'
+                    }
+                },
+                {
+                    '@type': 'SoftwareApplication',
+                    '@id': `${baseUrl}/#product`,
+                    name: 'BeyondStrings',
+                    applicationCategory: 'CommunicationApplication',
+                    applicationSubCategory: 'Encrypted Messaging',
+                    operatingSystem: 'Web, iOS, Android',
+                    url: `${baseUrl}/`,
+                    description: DEFAULT_DESCRIPTION,
+                    featureList: 'Encrypted real-time messaging, AI conversation insights, Conversation replay controls, Group chat with roles, Smart message search, Encrypted media sharing, Web Push notifications, Analytics dashboard',
+                    screenshot: `${baseUrl}${DEFAULT_OG_IMAGE}`,
+                    publisher: { '@id': `${baseUrl}/#organization` },
+                    aggregateRating: {
+                        '@type': 'AggregateRating',
+                        ratingValue: '5',
+                        reviewCount: '3',
+                        bestRating: '5',
+                        worstRating: '1'
+                    },
+                    offers: [
+                        {
+                            '@type': 'Offer',
+                            name: 'Free',
+                            price: '0',
+                            priceCurrency: 'USD',
+                            description: '1,000 messages/mo, 3 integrations, Basic AI Summaries',
+                            availability: 'https://schema.org/InStock',
+                            url: `${baseUrl}/`
+                        },
+                        {
+                            '@type': 'Offer',
+                            name: 'Pro',
+                            price: '25',
+                            priceCurrency: 'USD',
+                            description: '50,000 messages/mo, Unlimited integrations, Advanced Smart Search, API Access',
+                            availability: 'https://schema.org/InStock',
+                            url: `${baseUrl}/`
+                        },
+                        {
+                            '@type': 'Offer',
+                            name: 'Premium',
+                            price: '53',
+                            priceCurrency: 'USD',
+                            description: 'Unlimited everything, Custom Model Training, Priority Support, SSO and Enterprise Security',
+                            availability: 'https://schema.org/InStock',
+                            url: `${baseUrl}/`
+                        }
+                    ]
+                },
+                {
+                    '@type': 'FAQPage',
+                    '@id': `${baseUrl}/#faq`,
+                    mainEntity: [
+                        {
+                            '@type': 'Question',
+                            name: 'Is BeyondStrings free to use?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'Yes. BeyondStrings has a free plan that includes 1,000 messages per month, 3 integrations, and basic AI summaries — no credit card required.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'Is BeyondStrings encrypted?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'Yes. BeyondStrings encrypts messages and media to protect your conversations and private messaging workflows.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'What AI features does BeyondStrings include?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'BeyondStrings includes AI-powered conversation summaries, sentiment analysis, smart keyword search, and an insights dashboard that surfaces key topics and trends from your team communications.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'Does BeyondStrings support group chats?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'Yes. BeyondStrings supports group chat with role-based moderation (owner, admin, member), join requests, approval flows, and member management.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'Can I replay past conversations?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'Yes. BeyondStrings has a conversation replay feature that lets you relive any conversation timeline with AI-generated summaries and context tags.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'Is there a mobile app for BeyondStrings?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'BeyondStrings is a Progressive Web App (PWA) that works on any device — desktop, iOS, and Android — directly from your browser with offline support.'
+                            }
+                        },
+                        {
+                            '@type': 'Question',
+                            name: 'How does BeyondStrings compare to Slack or Discord?',
+                            acceptedAnswer: {
+                                '@type': 'Answer',
+                                text: 'Unlike Slack or Discord, BeyondStrings focuses on AI-powered conversation intelligence — summaries, replay, and semantic search — so your team retains and acts on the knowledge inside your chats.'
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
 
         const routeSeo = {
             '/': {

@@ -26,9 +26,9 @@ const FeaturesBento = ({ className = '' }) => {
   }, []);
 
   return (
-    <section id="solutions" className={cn('py-16 md:py-24 scroll-mt-28', className)} ref={sectionRef}>
+    <section id="solutions" aria-labelledby="features-heading" className={cn('py-16 md:py-24 scroll-mt-28', className)} ref={sectionRef}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-center mb-20 md:mb-28">
+        <h2 id="features-heading" className="text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-center mb-20 md:mb-28">
           Everything You Need In One Product
         </h2>
 
