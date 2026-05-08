@@ -79,17 +79,29 @@ const STEPS = [
         number: "08",
         icon: LayoutDashboard,
         title: "Admin Dashboard",
+        adminOnly: true,
         color: "text-cyan-300",
         border: "border-cyan-400/30",
         bg: "bg-cyan-500/10",
         description:
             "Admins can monitor users, groups, and live platform stats.",
     },
+    {
+        number: "09",
+        icon: Search,
+        title: "SEO & Search Console",
+        adminOnly: true,
+        color: "text-lime-300",
+        border: "border-lime-400/30",
+        bg: "bg-lime-500/10",
+        description:
+            "Set PUBLIC_APP_URL, add Google/Bing verification env vars, and run build so sitemap + robots are refreshed for production.",
+    },
 ];
 
 export default function HelpModal({ isAdmin = false, triggerClassName = "", triggerIconSize = 18 }) {
     const [open, setOpen] = useState(false);
-    const steps = isAdmin ? STEPS : STEPS.filter((step) => step.title !== "Admin Dashboard");
+    const steps = isAdmin ? STEPS : STEPS.filter((step) => !step.adminOnly);
 
     return (
         <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -156,6 +168,12 @@ export default function HelpModal({ isAdmin = false, triggerClassName = "", trig
                             <span className="font-semibold text-slate-300">Tip: </span>
                             On mobile, tap the menu icon (☰) in the top-left to open the sidebar. The sidebar holds your chat list, user search, and group join field.
                         </div>
+                        {isAdmin && (
+                            <div className="mt-3 rounded-[1rem] border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-xs leading-relaxed text-emerald-100/90">
+                                <span className="font-semibold text-emerald-200">Admin SEO Tip: </span>
+                                After finalizing your domain, set PUBLIC_APP_URL, PUBLIC_GOOGLE_SITE_VERIFICATION, and PUBLIC_BING_SITE_VERIFICATION in deployment env vars.
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer close button */}

@@ -56,17 +56,17 @@
 
 ## Architecture Snapshot
 
-| Path | Responsibility |
-| --- | --- |
-| `src/RootApp.js` | Auth gate + route orchestration + lazy loading |
-| `src/hooks/useLegacyChatRuntime.js` | Core chat runtime orchestration |
-| `src/firebase/chatService.js` | Messages, reactions, replies, presence |
-| `src/firebase/socialService.js` | Groups, membership, approvals, sync |
-| `api/ai.js` | AI gateway with provider fallback |
-| `api/jobs/enqueue.js` | Async job enqueue endpoint |
-| `api/analytics/summary.js` | Cached room analytics API |
-| `api/health/infra.js` | Infra health status (Neon/Redis checks) |
-| `worker/index.js` | Background worker for queue processors |
+| Path                                | Responsibility                                 |
+| ----------------------------------- | ---------------------------------------------- |
+| `src/RootApp.js`                    | Auth gate + route orchestration + lazy loading |
+| `src/hooks/useLegacyChatRuntime.js` | Core chat runtime orchestration                |
+| `src/firebase/chatService.js`       | Messages, reactions, replies, presence         |
+| `src/firebase/socialService.js`     | Groups, membership, approvals, sync            |
+| `api/ai.js`                         | AI gateway with provider fallback              |
+| `api/jobs/enqueue.js`               | Async job enqueue endpoint                     |
+| `api/analytics/summary.js`          | Cached room analytics API                      |
+| `api/health/infra.js`               | Infra health status (Neon/Redis checks)        |
+| `worker/index.js`                   | Background worker for queue processors         |
 
 ## Setup
 
@@ -85,6 +85,7 @@ npm run build
 npm run preview
 npm run smoke:infra
 npm run verify:prod
+npm run seo:generate
 npm run worker
 npm run worker:dev
 npm run migrate:group-approval:dry
@@ -104,6 +105,10 @@ PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 PUBLIC_FIREBASE_APP_ID=
 PUBLIC_FIREBASE_VAPID_KEY=
 PUBLIC_API_BASE_URL=/api
+PUBLIC_APP_URL=https://your-app.vercel.app
+PUBLIC_GOOGLE_SITE_VERIFICATION=
+PUBLIC_BING_SITE_VERIFICATION=
+PUBLIC_CONTENT_PATHS=
 PUBLIC_AI_GATEWAY_ENABLED=true
 PUBLIC_AI_PROVIDER_ORDER=openai,gemini,ollama,local
 ```
@@ -143,6 +148,17 @@ Health endpoint:
 ```txt
 GET /api/health/infra?token=<HEALTHCHECK_TOKEN>
 ```
+
+## SEO
+
+- Global metadata is configured in `index.html`.
+- Route-aware metadata + JSON-LD are managed in `src/RootApp.js`.
+- Build-time sitemap/robots generation runs automatically via `prebuild`:
+  - source routes: `scripts/sitemap-routes.json`
+  - optional additional paths: `PUBLIC_CONTENT_PATHS` (comma-separated)
+- Search Console verification tags are injected at runtime when these env vars are set:
+  - `PUBLIC_GOOGLE_SITE_VERIFICATION`
+  - `PUBLIC_BING_SITE_VERIFICATION`
 
 ## Screenshots
 

@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "vercel dev",
+    "seo:generate": "node scripts/generate-sitemap.mjs",
     "lint": "eslint . --ext .js,.jsx --max-warnings=0 --no-inline-config",
     "test": "vitest run --passWithNoTests",
+    "prebuild": "npm run seo:generate",
     "build": "vite build",
     "preview": "vite preview",
     "worker": "node worker/index.js",

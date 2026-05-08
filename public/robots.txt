@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Do not index authenticated/private app routes
+Disallow: /admin
+Disallow: /chat
+Disallow: /chat/
+Disallow: /home
+Disallow: /profile
+Disallow: /imported/
+Disallow: /login
+Disallow: /sign-up
+
+Sitemap: https://beyondstrings.app/sitemap.xml
