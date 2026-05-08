@@ -1,46 +1,68 @@
 {
-  "name": "convolens",
+  "name": "beyondstrings",
   "private": true,
   "version": "0.0.0",
-  "description": "ConvoLens built with React + Tailwind + Vite",
+  "description": "BeyondStrings - See Conversations Smarter. Built with React + Tailwind + Vite",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:full": "vercel dev",
+    "lint": "eslint . --ext .js,.jsx --max-warnings=0 --no-inline-config",
+    "test": "vitest run --passWithNoTests",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "worker": "node worker/index.js",
+    "worker:dev": "node --watch worker/index.js",
+    "smoke:infra": "node scripts/smoke-infra.mjs",
+    "verify:prod": "npm run build && npm run smoke:infra",
+    "migrate:group-approval:dry": "node scripts/normalize-group-approval.cjs --dry-run",
+    "migrate:group-approval": "node scripts/normalize-group-approval.cjs"
   },
   "keywords": [
     "react",
     "tailwind",
-    "convolens",
+    "beyondstrings",
     "encrypted-chat"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
     "@reduxjs/toolkit": "^2.11.2",
+    "@supabase/supabase-js": "^2.105.3",
+    "@upstash/redis": "^1.37.0",
+    "bullmq": "^5.8.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
+    "emoji-picker-react": "^4.12.0",
     "firebase": "^12.11.0",
+    "firebase-admin": "^13.0.1",
+    "formidable": "^3.5.4",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",
+    "ioredis": "^5.3.2",
     "lucide-react": "^1.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-redux": "^9.2.0",
+    "react-router-dom": "^7.14.1",
     "react-virtuoso": "^4.18.3",
     "recharts": "^3.8.1",
     "redux-persist": "^6.0.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
+    "eslint": "^9.38.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^3.2.4"
   }
 }

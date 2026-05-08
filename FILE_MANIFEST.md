@@ -1,397 +1,114 @@
-# 📋 Complete File Manifest: Edge Case Implementation
-
-## Summary of All Changes
-
-### NEW UTILITY MODULES (5 files)
-
-Created to provide enterprise-grade error handling and validation.
-
-```
-✅ src/utils/validators.js (220 lines)
-   - safeParseDateParts()
-   - safeParseTime()
-   - createValidDate()
-   - isValidMessage()
-   - validateMessageArray()
-   - getSafeLocalStorage()
-   - setSafeLocalStorage()
-   - getSafeMessageText()
-   - getSafeSenderName()
-   - clampNumber()
-   - parseScrubValue()
-   - getValidZoomLevel()
-   - getValidSpeed()
-   - isValidImageUrl()
-   - getSafeImageUrl()
-   - isMobileViewport()
-   - deepGet()
-   + 14 more utility functions
-
-✅ src/utils/errorHandling.js (130 lines)
-   - ErrorBoundary class
-   - RateLimitedLogger class
-   - safeAsync()
-   - withFallback()
-   - retryWithBackoff()
-   - parseWithRecovery()
-   - createErrorReport()
-   - isRecoverableError()
-
-✅ src/utils/performance.js (180 lines)
-   - memoizeWithTimeout()
-   - debounce()
-   - throttle()
-   - batchProcess()
-   - virtualizeItems()
-   - compressObject()
-   - createWeakCallback()
-   - getMemoryUsage()
-   - isHighMemoryUsage()
-   + 3 more performance utilities
-
-✅ src/utils/sanitization.js (240 lines)
-   - sanitizeHTML()
-   - escapeRegex()
-   - normalizeText()
-   - extractURLs()
-   - extractMentions()
-   - extractHashtags()
-   - truncateText()
-   - countWords()
-   - sanitizeMessage()
-   - cleanMessageArray()
-   - detectLanguageHint()
-   - formatFileSize()
-   - parseFileMetadata()
-   + 5 more sanitization utilities
-
-✅ src/utils/testEdgeCases.js (280 lines)
-   - EdgeCaseTestData object
-   - createParserTestData()
-   - runEdgeCaseTests()
-   - generateTestChat()
-   - ErrorSimulation object
-```
-
-### ENHANCED COMPONENTS (2 files)
-
-```
-✅ src/components/ReplayControls.js (+150 lines)
-   CHANGES:
-   - Added imports for validation utilities
-   - Enhanced date parsing with fallbacks
-   - Added null safety checks throughout
-   - Added boundary condition protection
-   - Added clamping for numeric values
-   - Enhanced localStorage access with safe wrappers
-   - Added ResizeObserver error handling
-   - Added type validation for callbacks
-   - Improved error catching in useEffect hooks
-   - Enhanced marker calculation robustness
-   - Added viewport width fallback (280px minimum)
-   - Improved slider value validation
-   - Enhanced speed option validation
-
-✅ src/utils/parser.js (+100 lines)
-   CHANGES:
-   - Added file size validation (50MB limit)
-   - Added message count limits (100K max)
-   - Added per-message length limits (10KB)
-   - Added line length limits (50K)
-   - Enhanced finalizePendingMessage() with validation
-   - Added parse statistics tracking
-   - Improved error handling per message
-   - Enhanced file read error messages
-   - Added encoding validation
-   - Improved timeout handling
-   - Added file size zero check
-   - Enhanced FileReader error handling
-```
-
-### DOCUMENTATION FILES (4 files)
-
-```
-✅ EDGE_CASE_IMPROVEMENTS.md (600+ lines)
-   - Overview of improvements
-   - Detailed handling for 100+ edge cases
-   - Usage examples
-   - Build statistics
-   - Known limitations
-   - Future enhancements
-
-✅ ROBUSTNESS_IMPLEMENTATION.md (800+ lines)
-   - Executive summary
-   - New utility modules overview
-   - Enhanced components details
-   - Edge case handling table
-   - Continuation plan
-   - Best practices guide
-   - Maintenance notes
-
-✅ IMPLEMENTATION_COMPLETE.md (600+ lines)
-   - Project achievement summary
-   - What was implemented
-   - Edge cases covered
-   - Implementation details
-   - Checklist of coverage
-   - Maintenance guidelines
-   - Next steps
-
-✅ QUICK_START_GUIDE.md (500+ lines)
-   - Quick start for developers
-   - QA/testing guide
-   - Safety improvements table
-   - Common pitfalls solved
-   - Real-world scenarios
-   - Key principles
-
-✅ PROJECT_COMPLETION.md (500+ lines)
-   - Implementation summary report
-   - Detailed metrics
-   - Quality measurements
-   - Production readiness
-   - Learning outcomes
-   - Business value
-   - Final verdict
-```
-
----
-
-## 📊 Statistics
-
-### Code Changes
-
-| Category            | Count  | Lines      |
-| ------------------- | ------ | ---------- |
-| New Utility Files   | 5      | 1,050      |
-| Enhanced Files      | 2      | 250        |
-| Documentation Files | 4      | 2,500+     |
-| Test Utilities      | 1      | 280        |
-| **TOTAL**           | **12** | **4,080+** |
-
-### Functions/Utilities
-
-| Type                     | Count  |
-| ------------------------ | ------ |
-| Validation Functions     | 21     |
-| Error Handling Functions | 8      |
-| Performance Functions    | 12     |
-| Sanitization Functions   | 18     |
-| Test Utilities           | 4      |
-| **TOTAL**                | **63** |
-
-### Edge Cases Handled
-
-| Category          | Count    |
-| ----------------- | -------- |
-| Data Parsing      | 28       |
-| Rendering         | 20       |
-| User Interaction  | 15       |
-| System Conditions | 12       |
-| Custom Validators | 25+      |
-| **TOTAL**         | **100+** |
-
----
-
-## 🔍 Detailed File Locations
-
-### In src/utils/:
-
-```
-validators.js        ← Main validation module
-errorHandling.js     ← Error recovery & logging
-performance.js       ← Optimization utilities
-sanitization.js      ← Data safety & cleaning
-testEdgeCases.js     ← Test data & utilities
-parser.js            ← Enhanced (100+ lines added)
-(existing files - unchanged)
-aiSummary.js         ← Not modified
-groupMessages.js     ← Not modified
-highlight.js         ← Not modified
-localSummary.js      ← Not modified
-messageTypes.js      ← Not modified
-```
-
-### In src/components/:
-
-```
-ReplayControls.js    ← Enhanced (150+ lines added)
-(other components - unchanged)
-ChatBubble.js        ← Not modified
-ChatHeader.js        ← Not modified
-FileUpload.js        ← Not modified
-SettingsPanel.js     ← Not modified
-(UI components - not modified)
-```
-
-### In Root:
-
-```
-EDGE_CASE_IMPROVEMENTS.md
-ROBUSTNESS_IMPLEMENTATION.md
-IMPLEMENTATION_COMPLETE.md
-QUICK_START_GUIDE.md
-PROJECT_COMPLETION.md
-```
-
----
-
-## ✅ Verification Checklist
-
-### Files Created
-
-- [x] validators.js (220 lines)
-- [x] errorHandling.js (130 lines)
-- [x] performance.js (180 lines)
-- [x] sanitization.js (240 lines)
-- [x] testEdgeCases.js (280 lines)
-- [x] EDGE_CASE_IMPROVEMENTS.md
-- [x] ROBUSTNESS_IMPLEMENTATION.md
-- [x] IMPLEMENTATION_COMPLETE.md
-- [x] QUICK_START_GUIDE.md
-- [x] PROJECT_COMPLETION.md
-
-### Files Enhanced
-
-- [x] ReplayControls.js (150+ lines added)
-- [x] parser.js (100+ lines added)
-
-### Build Status
-
-- [x] No errors
-- [x] No warnings
-- [x] 2,237 modules transformed
-- [x] Bundle size: 472.81 KB (154.36 KB gzip)
-- [x] Build time: 18.93s
-
-### Documentation
-
-- [x] Edge case specifications
-- [x] Implementation guide
-- [x] Quick start guide
-- [x] Completion report
-- [x] Project summary
-
----
-
-## 🎯 Import Guide
-
-### Using New Validators
-
-```javascript
-import { safeParseDateParts, validateMessageArray, getSafeLocalStorage, clampNumber, getValidZoomLevel, getValidSpeed } from "@/utils/validators";
-```
+# File Manifest
 
-### Using Error Handling
+This manifest reflects the current documentation and architecture after the App refactor and group chat implementation.
 
-```javascript
-import { withFallback, retryWithBackoff, safeAsync, errorLogger } from "@/utils/errorHandling";
-```
+## Documentation Files
 
-### Using Performance Utils
+- README.md — full feature list, architecture, env vars, scripts, and screenshot gallery
+- QUICK_START_GUIDE.md — install, env setup (client + server), migrations, QA checklist
+- GITHUB_DEPLOYMENT.md — branch flow and deployment checks
+- AI_FEATURES_TESTING.md — AI feature test cases
+- EDGE_CASE_IMPROVEMENTS.md — edge-case handling notes
+- ROBUSTNESS_IMPLEMENTATION.md — resilience and reliability notes
+- IMPLEMENTATION_COMPLETE.md — original implementation sign-off
+- PROJECT_COMPLETION.md — project milestone record
+- FILE_MANIFEST.md — this file
 
-```javascript
-import { getMemoryUsage, isHighMemoryUsage, debounce, throttle, batchProcess } from "@/utils/performance";
-```
+## Visual Assets
 
-### Using Sanitization
+- `screenshots/*.png` — UI preview raster captures
+- `screenshots/*.svg` — vector export variants for documentation and sharing
 
-```javascript
-import { sanitizeHTML, cleanMessageArray, sanitizeMessage, normalizeText, extractURLs } from "@/utils/sanitization";
-```
+## Branding Source of Truth
 
-### Using Test Utilities
+- `src/config/branding.js` — canonical app name, tagline, and asset references.
+- `src/config/brandTokens.js` — derived brand keys/tokens used across runtime.
+- `index.html` — SEO metadata (title/description/OpenGraph/Twitter).
+- `public/site.webmanifest` — PWA app name and icons.
 
-```javascript
-import { EdgeCaseTestData, generateTestChat, createParserTestData, ErrorSimulation } from "@/utils/testEdgeCases";
-```
+## Key Application Files
 
----
+### Entry & Routing
 
-## 📈 Impact Summary
+- `src/App.js` — Thin wrapper that delegates to runtime hook.
+- `src/RootApp.js` — Router shell, auth gate, login-time membership sync (`syncMembershipOnLogin`), and route-level lazy loading.
+- `src/pages/Chat.js` — Bridge between route context and legacy chat runtime.
 
-### Before Implementation
+### Chat Runtime
 
-- ❌ Basic error handling
-- ❌ Limited validation
-- ❌ No edge case coverage
-- ❌ Potential crashes on bad input
-- ❌ No memory monitoring
+- `src/hooks/useLegacyChatRuntime.js` — Main chat runtime (state orchestration, effects, handlers, group settings, sync health).
+- `src/features/chat/appRuntimeHelpers.js` — Pure helper functions/constants: timestamps, replay delay, background tokens, theme pickers, sync health label.
 
-### After Implementation
+### Firebase Services
 
-- ✅ Enterprise error handling (rate-limited, recoverable)
-- ✅ Comprehensive validation (21 validators)
-- ✅ 100+ edge cases handled
-- ✅ Zero-crash guarantee
-- ✅ Memory monitoring & enforcement
-- ✅ XSS prevention
-- ✅ Automatic recovery
-- ✅ Full documentation
-- ✅ Test utilities
-- ✅ <2% performance overhead
+- `src/firebase/chatService.js` — Firestore message CRUD, reactions (array-based toggle), reply metadata persistence, unread counter increments, `user_chats` self-healing.
+- `src/firebase/socialService.js` — Group management (create, join, approve, reject, leave, delete), member roles, login-time sync, join request queue, `updateChatReadState`.
+- `src/firebase/userService.js` — User profiles, username search.
+- `src/firebase/config.js` — Firebase app and Firestore initialization.
 
----
+### Components
 
-## 🚀 Next Steps
+- `src/components/ChatBubble.js` — Message bubble: reply block, emoji reactions (👍 ❤️ 😂 🔥), action menu, delivery status. Mobile-first widths (`max-w-[100vw]`).
+- `src/components/ChatHeader.js` — Sticky header: sync health chip (Offline/Syncing/Degraded/Live), clickable group title for settings.
+- `src/components/GroupSettingsPanel.js` — Group settings modal: edit name/description/photo, member list (role-sorted), remove member, leave group, delete group.
+- `src/components/ChatListItem.js` — Sidebar item with unread count from `memberMeta[uid].unreadCount`.
+- `src/components/AISidePanel.js` — AI summary, assistant, search, reply suggestions panel.
+- `src/components/ReactionBar.js` — Per-message reaction display.
+- `src/components/AuthForms.js` — Sign-in / sign-up forms.
+- `src/components/SearchBar.js` — In-chat message search.
+- `src/components/SettingsPanel.js` — Appearance, background, and preferences.
 
-### Immediate (This Week)
+### Pages
 
-1. Run full test suite
-2. Deploy to staging
-3. QA edge case testing
-4. Monitor error logs
+- `src/pages/Home.js` — Chat discovery: start direct chat, create group, join by group ID (with approval flow).
+- `src/pages/Admin.js` — Admin dashboard: scrollable group table (single-row layout), user list.
+- `src/pages/Profile.js` — User avatar, username, preferences.
+- `src/pages/ImportedChat.js` — Imported chat archive viewer.
 
-### Short Term (This Month)
+### State
 
-1. Add Jest unit tests (80+ test cases)
-2. Add error tracking (Sentry/LogRocket)
-3. Load test with 10K+ messages
-4. Performance benchmarking
+- `src/store/store.js` — Redux store with encrypted persist.
+- `src/store/authSlice.js` — Auth state.
+- `src/store/appSessionSlice.js` — Session-level UI state.
 
-### Long Term (Future)
+### AI Gateway
 
-1. Add WebWorker for parsing
-2. Add IndexedDB backup
-3. Add data compression
-4. Add encryption support
+- `api/ai.js` — Serverless AI handler: summarize, reply_suggestions, assistant, web_context, embeddings. Supports OpenAI → Gemini → Ollama → local fallback chain.
+- `src/services/ai/index.js` — Client-side AI service: gateway calls, cosine similarity, local mood scoring.
+- `src/utils/aiSummary.js` — AI summary orchestration with provider fallbacks.
+- `src/utils/localSummary.js` — Offline local summary fallback.
 
----
+### Utilities
 
-## 📞 Support Reference
+- `src/utils/parser.js` — WhatsApp `.txt` chat file parser.
+- `src/utils/encryption.js` — AES encrypt/decrypt; group key `grp:{chatId}`.
+- `src/utils/groupMessages.js` — Message grouping by sender and date.
+- `src/utils/messageTypes.js` — Message type constants and predicates.
+- `src/utils/sanitization.js` — Input sanitization helpers.
+- `src/utils/validators.js` — Form and data validators.
+- `src/utils/errorHandling.js` — Centralized error classification.
+- `src/utils/offlineMessageQueue.js` — Offline-first queue with reconnect sync.
+- `src/utils/chatBackgrounds.js` — Preset background image list.
+- `src/utils/highlight.js` — Search keyword highlighting.
+- `src/utils/performance.js` — Render performance utilities.
 
-### For Developers
+### Config
 
-→ See **QUICK_START_GUIDE.md**
+- `src/config/branding.js` — Brand name and tagline (`BeyondStrings`).
+- `src/config/brandTokens.js` — Design tokens.
 
-### For QA/Testers
+### Security Rules
 
-→ See **testEdgeCases.js** and **EDGE_CASE_IMPROVEMENTS.md**
+- `firestore.rules` — Firestore security rules. Legacy group support (no `joinPolicy`), rejoin flow, join request re-submit, system messages.
 
-### For Product Teams
+## Build and Bundling
 
-→ See **PROJECT_COMPLETION.md**
+- Vite manual chunking configured in `vite.config.js` for heavy vendor groups.
+- Route-level lazy loading active for Home, Chat, Admin, Profile, and ImportedChat pages.
+- GroupSettingsPanel and AISidePanel loaded lazily within the chat runtime.
 
-### For Architects
+## Oversized File Check
 
-→ See **ROBUSTNESS_IMPLEMENTATION.md**
-
-### For Integration
-
-→ See **validators.js** and **errorHandling.js**
-
----
-
-## ✨ Final Status
-
-| Item              | Status           |
-| ----------------- | ---------------- |
-| Implementation    | ✅ Complete      |
-| Testing Utilities | ✅ Provided      |
-| Documentation     | ✅ Comprehensive |
-| Build             | ✅ Success       |
-| Production Ready  | ✅ Yes           |
-
----
-
-**All files are in place. The application is production-ready with enterprise-grade robustness!** 🎉
+- Component files are below 1000 lines.
+- `useLegacyChatRuntime.js` holds the largest code path by design (chat orchestration).
+- `socialService.js` holds group management APIs and is the second-largest service file.

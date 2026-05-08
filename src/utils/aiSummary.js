@@ -1,109 +1,139 @@
 import { createLocalSummary } from './localSummary';
+import { auth } from '../services/firebase/config';
 
-function toChatTranscript(messages) {
+const DEFAULT_PROVIDER_ORDER = ['openai', 'gemini', 'ollama', 'local'];
+
+function toChatTranscript(messages, maxMessages = 180) {
     return messages
-        .slice(-150)
+        .slice(-maxMessages)
         .map((m) => `${m.date} ${m.time} - ${m.sender || 'System'}: ${m.message}`)
         .join('\n');
 }
 
-async function summarizeWithOpenAI(lastMessages, apiKey) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            temperature: 0.2,
-            messages: [
-                {
-                    role: 'system',
-                    content:
-                        'You summarize WhatsApp chats. Provide: key topics, user activity, sentiment, and action points in concise bullet points.'
-                },
-                {
-                    role: 'user',
-                    content: `Summarize this WhatsApp chat:\n\n${lastMessages}`
-                }
-            ]
-        })
-    });
-
-    if (!response.ok) {
+function truncateForModelInput(text, maxChars = 9000) {
+    const normalized = String(text || '').trim();
+    if (!normalized) {
         return '';
     }
 
-    const data = await response.json();
-    return data?.choices?.[0]?.message?.content?.trim() || '';
+    if (normalized.length <= maxChars) {
+        return normalized;
+    }
+
+    return `${normalized.slice(-maxChars)}\n\n[Transcript truncated to fit model context]`;
 }
 
-async function summarizeWithOllama(lastMessages) {
-    const ollamaBaseUrl = (import.meta.env.VITE_OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
-    const ollamaModel = import.meta.env.VITE_OLLAMA_MODEL || 'llama3.2:3b';
+function getProviderOrder() {
+    const configured = String(import.meta.env.PUBLIC_AI_PROVIDER_ORDER || '')
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean);
+
+    if (!configured.length) {
+        return DEFAULT_PROVIDER_ORDER;
+    }
+
+    const uniqueConfigured = Array.from(new Set(configured));
+    const withFallbacks = DEFAULT_PROVIDER_ORDER.filter((provider) => !uniqueConfigured.includes(provider));
+    return [...uniqueConfigured, ...withFallbacks];
+}
+
+export function getConfiguredAiProviders() {
+    const gatewayEnabled = String(
+        import.meta.env.PUBLIC_AI_GATEWAY_ENABLED || (import.meta.env.DEV ? 'false' : 'true')
+    ).toLowerCase() !== 'false';
+
+    return {
+        hasOpenAI: gatewayEnabled,
+        hasGemini: gatewayEnabled,
+        hasHuggingFace: gatewayEnabled,
+        hasCloudProvider: gatewayEnabled,
+        order: getProviderOrder()
+    };
+}
+
+function normalizeAiText(text) {
+    return String(text || '')
+        .replace(/```(?:markdown|md|text)?/gi, '')
+        .trim();
+}
+
+async function summarizeWithGateway(lastMessages) {
+    const gatewayEnabled = String(
+        import.meta.env.PUBLIC_AI_GATEWAY_ENABLED || (import.meta.env.DEV ? 'false' : 'true')
+    ).toLowerCase() !== 'false';
+
+    if (!gatewayEnabled) {
+        return { summary: '', provider: '' };
+    }
+
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 24000);
 
     try {
-        const response = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        const token = await auth?.currentUser?.getIdToken?.();
+        const response = await fetch('/api/ai', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
             },
+            signal: controller.signal,
             body: JSON.stringify({
-                model: ollamaModel,
-                stream: false,
-                messages: [
-                    {
-                        role: 'system',
-                        content:
-                            'You summarize WhatsApp chats. Provide: key topics, user activity, sentiment, and action points in concise bullet points.'
-                    },
-                    {
-                        role: 'user',
-                        content: `Summarize this WhatsApp chat:\n\n${lastMessages}`
-                    }
-                ]
-            }),
-            signal: controller.signal
+                task: 'summary',
+                messages: lastMessages,
+                query: 'mode:all'
+            })
         });
 
         if (!response.ok) {
-            return '';
+            return { summary: '', provider: '' };
         }
 
         const data = await response.json();
-        return data?.message?.content?.trim() || '';
+        const summaryText = String(data?.data?.result || data?.result || '').trim();
+        const provider = String(data?.data?.provider || data?.provider || '').trim().toLowerCase();
+        return {
+            summary: normalizeAiText(summaryText),
+            provider
+        };
+    } catch {
+        return { summary: '', provider: '' };
     } finally {
         window.clearTimeout(timeoutId);
     }
 }
 
-export async function summarizeMessagesWithAI(messages) {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim();
+export async function summarizeMessagesWithAI(messages, options = {}) {
+    const includeMeta = Boolean(options?.includeMeta);
 
     if (!messages || messages.length === 0) {
-        return 'No messages available for summary.';
+        const fallback = 'No messages available for summary.';
+        return includeMeta ? { summary: fallback, provider: 'empty' } : fallback;
     }
 
-    const lastMessages = toChatTranscript(messages);
+    const cappedMessages = messages.slice(-180).map((m, index) => ({
+        id: String(m?.id || `summary-${index}`),
+        sender: String(m?.sender || 'System'),
+        message: String(m?.message || ''),
+        date: String(m?.date || ''),
+        time: String(m?.time || '')
+    }));
 
     try {
-        if (apiKey) {
-            const openAISummary = await summarizeWithOpenAI(lastMessages, apiKey);
-            if (openAISummary) {
-                return openAISummary;
-            }
+        const result = await summarizeWithGateway(cappedMessages);
+        if (result.summary) {
+            return includeMeta
+                ? {
+                    summary: result.summary,
+                    provider: result.provider || 'gateway'
+                }
+                : result.summary;
         }
-
-        const ollamaSummary = await summarizeWithOllama(lastMessages);
-        if (ollamaSummary) {
-            return ollamaSummary;
-        }
-
-        return createLocalSummary(messages);
-    } catch (error) {
-        return createLocalSummary(messages);
+    } catch {
+        // Fallback below
     }
+
+    const fallback = createLocalSummary(messages);
+    return includeMeta ? { summary: fallback, provider: 'local' } : fallback;
 }

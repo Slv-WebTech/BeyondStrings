@@ -1,6 +1,7 @@
 const appVersion = new URL(self.location.href).searchParams.get('v') || 'dev';
-const CACHE_NAME = `convolens-cache-${appVersion}`;
-const APP_SHELL_FILES = ['./', './index.html', './site.webmanifest'];
+const cachePrefix = new URL(self.location.href).searchParams.get('cp') || 'app-cache';
+const CACHE_NAME = `${cachePrefix}-${appVersion}`;
+const APP_SHELL_FILES = ['./', './index.html', './offline.html', './site.webmanifest'];
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -26,10 +27,70 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+function resolveAbsoluteUrl(url) {
+    if (!url) return undefined;
+    try {
+        // Already absolute
+        if (/^https?:\/\//i.test(url)) return url;
+        // Resolve relative to SW origin
+        return new URL(url, self.location.origin).href;
+    } catch {
+        return url;
+    }
+}
+
+function buildNotificationOptions(payload) {
+    const options = {
+        body: String(payload.body || ''),
+        tag: payload.tag || undefined,
+        renotify: Boolean(payload.renotify),
+        silent: false,
+        data: payload.data || {}
+    };
+
+    const icon = resolveAbsoluteUrl(payload.icon);
+    const badge = resolveAbsoluteUrl(payload.badge);
+    if (icon) options.icon = icon;
+    if (badge) options.badge = badge;
+
+    return options;
+}
+
 self.addEventListener('message', (event) => {
     if (event.data?.type === 'SKIP_WAITING') {
         self.skipWaiting();
+        return;
     }
+
+    if (event.data?.type === 'SHOW_NOTIFICATION') {
+        const payload = event.data?.payload || {};
+        const title = String(payload.title || 'New message');
+        const options = buildNotificationOptions(payload);
+
+        event.waitUntil(self.registration.showNotification(title, options));
+    }
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    // Always use an absolute URL so Edge and other browsers can open the window correctly.
+    let targetUrl = String(event.notification?.data?.url || '');
+    if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = new URL(targetUrl || '/', self.location.origin).href;
+    }
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            const existing = windowClients.find((client) => client.url.startsWith(self.location.origin));
+
+            if (existing) {
+                return existing.focus().then(() => existing.navigate(targetUrl));
+            }
+
+            return clients.openWindow(targetUrl);
+        })
+    );
 });
 
 self.addEventListener('fetch', (event) => {
@@ -53,8 +114,13 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 })
                 .catch(async () => {
-                    const cached = await caches.match('./index.html');
-                    return cached || Response.error();
+                    const cachedPage = await caches.match('./index.html');
+                    if (cachedPage) {
+                        return cachedPage;
+                    }
+
+                    const offlinePage = await caches.match('./offline.html');
+                    return offlinePage || Response.error();
                 })
         );
         return;
@@ -77,4 +143,46 @@ self.addEventListener('fetch', (event) => {
             });
         })
     );
+});
+
+self.addEventListener('sync', (event) => {
+    if (event.tag !== 'beyondstrings-sync') {
+        return;
+    }
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            clientList.forEach((client) => {
+                client.postMessage({ type: 'SYNC_RETRY_OFFLINE_QUEUE' });
+            });
+        })
+    );
+});
+
+self.addEventListener('push', (event) => {
+    let payload = {};
+
+    try {
+        payload = event.data ? event.data.json() : {};
+    } catch {
+        payload = { notification: { title: 'BeyondStrings', body: event.data?.text() || 'New message' } };
+    }
+
+    const title = String(payload?.notification?.title || payload?.title || 'BeyondStrings');
+    const rawIcon = payload?.notification?.icon || payload?.icon;
+    const rawBadge = payload?.notification?.badge || payload?.badge;
+
+    const options = {
+        body: String(payload?.notification?.body || payload?.body || 'You have a new message.'),
+        tag: payload?.notification?.tag || payload?.tag || 'beyondstrings-push',
+        silent: false,
+        data: payload?.data || { url: './' }
+    };
+
+    const icon = resolveAbsoluteUrl(rawIcon);
+    const badge = resolveAbsoluteUrl(rawBadge);
+    if (icon) options.icon = icon;
+    if (badge) options.badge = badge;
+
+    event.waitUntil(self.registration.showNotification(title, options));
 });
