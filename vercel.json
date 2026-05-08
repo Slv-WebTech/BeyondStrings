@@ -1,5 +1,9 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/chats/join-request", "destination": "/api/chats?handler=join-request" },
+    { "source": "/api/chats/resync-membership", "destination": "/api/chats?handler=resync-membership" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
 }
