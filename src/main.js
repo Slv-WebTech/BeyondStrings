@@ -84,11 +84,11 @@ const showInstallPrompt = (deferredPrompt) => {
         color: '#e2e8f0',
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         fontSize: '0.78rem',
-        boxShadow: '0 16px 34px rgba(2,6,23,0.35)'
+        boxShadow: '0 16px 34px rgba(2,6,23,0.35)',
+        whiteSpace: 'nowrap'
     });
-
     const label = document.createElement('span');
-    label.textContent = `Install ${BRAND.name} for faster access`;
+    label.textContent = `Add ${BRAND.name} to home screen`;
 
     const installButton = document.createElement('button');
     installButton.type = 'button';
@@ -143,21 +143,48 @@ const tryRegisterBackgroundSync = (registration) => {
 };
 
 const PersistLoading = () => (
-    <div
-        style={{
+    <>
+        <style>{`
+            @keyframes bs-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(0.9);opacity:0.65} }
+            @keyframes bs-fadein { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+            @keyframes bs-bar { 0%{width:0%} 60%{width:72%} 100%{width:100%} }
+            @keyframes bs-shimmer { 0%,100%{opacity:0.45} 50%{opacity:1} }
+        `}</style>
+        <div style={{
             minHeight: '100dvh',
-            display: 'grid',
-            placeItems: 'center',
-            color: '#cbd5e1',
-            background: 'linear-gradient(160deg, #081318 0%, #0f172a 100%)',
-            fontFamily: "'Inter', 'Segoe UI', sans-serif"
-        }}
-    >
-        <div style={{ textAlign: 'center' }}>
-            <p style={{ margin: 0, fontWeight: 600 }}>{`Loading ${BRAND.name}...`}</p>
-            <p style={{ margin: '6px 0 0', fontSize: '0.75rem', opacity: 0.52, letterSpacing: '0.04em' }}>{BRAND.tagline}</p>
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'radial-gradient(ellipse at 50% 30%, #0d2232 0%, #0f172a 55%, #060e18 100%)',
+            fontFamily: "'Inter','Segoe UI',sans-serif"
+        }}>
+            <div style={{ textAlign: 'center', animation: 'bs-fadein 0.55s cubic-bezier(0.22,1,0.36,1) both' }}>
+                <img
+                    src={BRAND_ASSETS.logoDark}
+                    alt={BRAND.name}
+                    width={80}
+                    height={80}
+                    style={{
+                        borderRadius: 20,
+                        boxShadow: '0 0 0 1px rgba(0,240,255,0.18), 0 0 52px rgba(0,240,255,0.22)',
+                        animation: 'bs-pulse 2.2s ease-in-out infinite',
+                        display: 'block',
+                        margin: '0 auto 22px'
+                    }}
+                />
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '1.15rem', color: '#e2e8f0', letterSpacing: '-0.015em' }}>
+                    {BRAND.name}
+                </p>
+                <p style={{ margin: '5px 0 0', fontSize: '0.7rem', color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', animation: 'bs-shimmer 2s ease-in-out infinite' }}>
+                    {BRAND.tagline}
+                </p>
+                <div style={{ marginTop: 28, width: 120, height: 2, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', margin: '28px auto 0' }}>
+                    <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#00f0ff,#a855f7)', animation: 'bs-bar 1.8s cubic-bezier(0.4,0,0.2,1) both' }} />
+                </div>
+            </div>
         </div>
-    </div>
+    </>
 );
 
 const syncFaviconWithTheme = () => {
