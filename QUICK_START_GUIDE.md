@@ -46,6 +46,16 @@ UPSTASH_REDIS_REST_TOKEN=
 REDIS_URL=
 OPENAI_API_KEY=
 GEMINI_API_KEY=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=media
+```
+
+Encrypted media (image/video/audio/document) uploads go through Supabase Storage. Also add to `.env.local` (client-readable):
+
+```env
+PUBLIC_SUPABASE_URL=
+PUBLIC_SUPABASE_STORAGE_BUCKET=media
 ```
 
 ## 3) Build for Production
