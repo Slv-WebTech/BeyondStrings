@@ -95,8 +95,8 @@ export default function RootApp() {
     const isAdmin = useSelector(selectIsAdmin);
     const authInitialized = useSelector(selectAuthInitialized);
     const themePreference = useSelector(selectThemePreference);
-    const resolvedTheme = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
     const [prefersDark, setPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const resolvedTheme = themePreference === 'system' ? (prefersDark ? 'dark' : 'light') : themePreference;
     const { show: showOnboarding, dismiss: dismissOnboarding } = useOnboarding();
 
     useEffect(() => {

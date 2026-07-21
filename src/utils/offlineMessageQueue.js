@@ -63,7 +63,8 @@ export async function enqueueOfflineMessage(entry) {
         uid: String(entry?.uid || '').trim(),
         previewText: String(entry?.previewText || '').trim(),
         sender: String(entry?.sender || '').trim(),
-        createdAtMs: Number(entry?.createdAtMs || Date.now())
+        createdAtMs: Number(entry?.createdAtMs || Date.now()),
+        retryCount: Number(entry?.retryCount || 0)
     };
 
     if (!safeEntry.id || !safeEntry.roomId || !safeEntry.uid) {
@@ -97,6 +98,33 @@ export async function getOfflineMessagesByRoom(roomId) {
         const index = store.index('roomId');
         const request = index.getAll(safeRoomId);
         request.onsuccess = () => resolve(sortEntries(request.result || []));
+    });
+}
+
+export async function bumpOfflineMessageRetry(id) {
+    const safeId = String(id || '').trim();
+    if (!safeId) {
+        return 0;
+    }
+
+    return withStore('readwrite', (store, resolve) => {
+        if (!store) {
+            resolve(0);
+            return;
+        }
+
+        const getRequest = store.get(safeId);
+        getRequest.onsuccess = () => {
+            const existing = getRequest.result;
+            if (!existing) {
+                resolve(0);
+                return;
+            }
+
+            const nextRetryCount = Number(existing.retryCount || 0) + 1;
+            const putRequest = store.put({ ...existing, retryCount: nextRetryCount });
+            putRequest.onsuccess = () => resolve(nextRetryCount);
+        };
     });
 }
 
