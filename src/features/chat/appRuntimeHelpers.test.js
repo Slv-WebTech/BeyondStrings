@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { encryptMessage } from '../../utils/encryption';
 import {
+    buildReplyPreview,
+    canDeleteMessageForEveryone,
     deriveSharedRoomId,
     getGroupRoleLabel,
     getRouteChatId,
@@ -313,5 +315,53 @@ describe('mapLiveMessageToUiMessage', () => {
     it('falls back to a pseudonym when no sender label resolver result is available', () => {
         const mapped = mapLiveMessageToUiMessage(baseEntry, 'secret', 'user-1', () => null);
         expect(mapped.sender).toBe(pseudonymFromUid('user-1'));
+    });
+});
+
+describe('canDeleteMessageForEveryone (delete-for-everyone regression suite)', () => {
+    it('allows the original sender to delete their own persisted message', () => {
+        expect(canDeleteMessageForEveryone({ uid: 'user-1', firestoreId: 'm1' }, 'user-1')).toBe(true);
+    });
+
+    it('denies deletion when the requester is not the original sender', () => {
+        expect(canDeleteMessageForEveryone({ uid: 'user-1', firestoreId: 'm1' }, 'user-2')).toBe(false);
+    });
+
+    it('denies deletion when the message has not been persisted to Firestore yet', () => {
+        expect(canDeleteMessageForEveryone({ uid: 'user-1' }, 'user-1')).toBe(false);
+    });
+
+    it('denies deletion for a missing message or missing auth uid', () => {
+        expect(canDeleteMessageForEveryone(null, 'user-1')).toBe(false);
+        expect(canDeleteMessageForEveryone({ uid: 'user-1', firestoreId: 'm1' }, '')).toBe(false);
+    });
+
+    it('is not fooled by whitespace-only uid mismatches', () => {
+        expect(canDeleteMessageForEveryone({ uid: ' user-1 ', firestoreId: 'm1' }, 'user-1')).toBe(true);
+    });
+});
+
+describe('buildReplyPreview (reply regression suite)', () => {
+    it('returns null for a missing message', () => {
+        expect(buildReplyPreview(null)).toBeNull();
+        expect(buildReplyPreview(undefined)).toBeNull();
+    });
+
+    it('builds a preview using the message id, sender, and text', () => {
+        const preview = buildReplyPreview({ id: 'm1', sender: 'Alice', message: 'hello there' });
+        expect(preview).toEqual({ id: 'm1', sender: 'Alice', message: 'hello there' });
+    });
+
+    it('falls back to clientId when id is missing, and to "User"/"[message]" for blank fields', () => {
+        const preview = buildReplyPreview({ clientId: 'c1', sender: '   ', message: '   ' });
+        expect(preview.id).toBe('c1');
+        expect(preview.sender).toBe('User');
+        expect(preview.message).toBe('[message]');
+    });
+
+    it('truncates long message bodies to 120 characters', () => {
+        const longText = 'x'.repeat(200);
+        const preview = buildReplyPreview({ id: 'm1', sender: 'Alice', message: longText });
+        expect(preview.message).toHaveLength(120);
     });
 });

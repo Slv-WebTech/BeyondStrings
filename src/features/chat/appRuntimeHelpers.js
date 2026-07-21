@@ -469,6 +469,34 @@ export function mapQueuedMessageToUiMessage(entry, secret) {
     };
 }
 
+/**
+ * Builds the reply-preview payload attached to the composer when a user replies
+ * to a message. Truncates long message bodies to keep the preview compact.
+ */
+export function buildReplyPreview(message) {
+    if (!message) {
+        return null;
+    }
+
+    return {
+        id: message.id || message.clientId || `reply-${Date.now()}`,
+        sender: String(message.sender || 'User').trim() || 'User',
+        message: String(message.message || '').slice(0, 120).trim() || '[message]'
+    };
+}
+
+/**
+ * Guards "delete for everyone": only the original sender may hard-delete a message,
+ * and only once it has been persisted to Firestore (has a firestoreId).
+ */
+export function canDeleteMessageForEveryone(message, authUid) {
+    if (!message?.firestoreId) {
+        return false;
+    }
+
+    return String(message.uid || '').trim() === String(authUid || '').trim();
+}
+
 export function shouldHideConversationMessage(message) {
     const senderUid = String(message?.uid || '').trim().toLowerCase();
     const messageText = String(message?.message || '').trim().toLowerCase();

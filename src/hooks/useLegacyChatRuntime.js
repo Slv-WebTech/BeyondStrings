@@ -101,6 +101,8 @@ import {
 import { errorLogger } from '../utils/errorHandling';
 import {
     ACTIVE_ONLINE_WINDOW_MS,
+    buildReplyPreview,
+    canDeleteMessageForEveryone,
     createOfflineClientId,
     DEFAULT_CHAT_BACKGROUND,
     DEFAULT_HEADER_CONTACT_IMAGE,
@@ -2565,15 +2567,10 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
     };
 
     const handleReplyToMessage = useCallback((message) => {
-        if (!message) {
+        const replyData = buildReplyPreview(message);
+        if (!replyData) {
             return;
         }
-
-        const replyData = {
-            id: message.id || message.clientId || `reply-${Date.now()}`,
-            sender: String(message.sender || 'User').trim() || 'User',
-            message: String(message.message || '').slice(0, 120).trim() || '[message]'
-        };
 
         setReplyToMessage(replyData);
     }, []);
@@ -2866,7 +2863,7 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                 return;
             }
 
-            if (String(message.uid || '').trim() !== String(authUid || '').trim()) {
+            if (!canDeleteMessageForEveryone(message, authUid)) {
                 setFirebaseError('You can only delete your own messages for everyone.');
                 return;
             }
