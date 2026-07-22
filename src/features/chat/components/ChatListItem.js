@@ -64,7 +64,7 @@ export default function ChatListItem({ chat, isActive, onSelect, currentUserId }
     <Button
       type="button"
       variant="ghost"
-      className={`group h-auto w-full justify-start rounded-[1.35rem] border px-3 py-3 text-left shadow-[0_8px_24px_rgba(15,23,42,0.14)] transition-all duration-200 ${isActive ? "border-emerald-300/45 bg-[linear-gradient(130deg,rgba(16,185,129,0.2),rgba(6,182,212,0.14),rgba(15,23,42,0.08))] text-white" : "border-white/8 bg-[linear-gradient(130deg,rgba(15,23,42,0.36),rgba(15,23,42,0.2),rgba(15,23,42,0.12))] text-slate-100 hover:border-cyan-300/25 hover:bg-[linear-gradient(130deg,rgba(22,163,74,0.16),rgba(8,145,178,0.1),rgba(15,23,42,0.2))]"} ${isImported ? "border-cyan-300/35 bg-[linear-gradient(130deg,rgba(6,182,212,0.2),rgba(14,116,144,0.14),rgba(15,23,42,0.1))]" : ""} ${unread ? "border-emerald-300/45 bg-[linear-gradient(130deg,rgba(16,185,129,0.2),rgba(6,182,212,0.12),rgba(15,23,42,0.1))]" : ""}`}
+      className={`group glass-panel h-auto w-full justify-start rounded-[1.35rem] px-3 py-3 text-left text-[var(--text-main)] transition-all duration-200 ${isActive ? "border-[color-mix(in_srgb,var(--accent)_45%,var(--border-soft)_55%)] bg-[linear-gradient(130deg,color-mix(in_srgb,var(--accent)_18%,var(--panel)_82%),color-mix(in_srgb,var(--accent)_10%,var(--panel)_90%))]" : "hover:border-[color-mix(in_srgb,var(--accent)_25%,var(--border-soft)_75%)] hover:bg-[var(--panel-soft)]"} ${isImported ? "border-[color-mix(in_srgb,#06b6d4_35%,var(--border-soft)_65%)] bg-[linear-gradient(130deg,color-mix(in_srgb,#06b6d4_16%,var(--panel)_84%),color-mix(in_srgb,#0e7490_10%,var(--panel)_90%))]" : ""} ${unread ? "border-[color-mix(in_srgb,var(--accent)_45%,var(--border-soft)_55%)] bg-[linear-gradient(130deg,color-mix(in_srgb,var(--accent)_18%,var(--panel)_82%),color-mix(in_srgb,var(--accent)_10%,var(--panel)_90%))]" : ""}`}
       onClick={onSelect}
     >
       <div className="flex w-full items-start gap-3">
@@ -73,15 +73,15 @@ export default function ChatListItem({ chat, isActive, onSelect, currentUserId }
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-semibold text-inherit drop-shadow-[0_1px_0_rgba(15,23,42,0.12)]">{title}</p>
-            <span className="shrink-0 text-[11px] text-slate-300/85">{formatTimestamp(chat.lastMessageAt || chat.updatedAt)}</span>
+            <p className="truncate text-sm font-semibold text-inherit">{title}</p>
+            <span className="shrink-0 text-[11px] text-[var(--text-muted)]">{formatTimestamp(chat.lastMessageAt || chat.updatedAt)}</span>
           </div>
           {isImported ? (
-            <span className="mt-1 inline-flex w-fit items-center rounded-full border border-cyan-300/45 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-100">
+            <span className="mt-1 inline-flex w-fit items-center rounded-full border border-cyan-500/45 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cyan-600 dark:text-cyan-300">
               Imported
             </span>
           ) : null}
-          <p className={`mt-1 truncate rounded-md px-1 py-0.5 text-xs ${unread ? "font-semibold text-emerald-50" : "text-slate-300/85"}`}>{preview}</p>
+          <p className={`mt-1 truncate rounded-md px-1 py-0.5 text-xs ${unread ? "font-semibold text-[var(--accent-strong)]" : "text-[var(--text-muted)]"}`}>{preview}</p>
         </div>
         {unread ? (
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-emerald-300 to-cyan-300 px-1.5 text-[11px] font-bold text-slate-950 shadow-[0_6px_14px_rgba(16,185,129,0.35)]">

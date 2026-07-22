@@ -389,34 +389,34 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                             exit={{ opacity: 0, scale: 0.93, y: 4 }}
                             transition={{ duration: 0.13 }}
                             className={clsx(
-                                'absolute bottom-full z-50 mb-1.5 min-w-[140px] rounded-xl border border-white/15 bg-[#111827]/97 p-1 text-xs text-slate-100 shadow-2xl backdrop-blur-md',
+                                'glass-panel-strong absolute bottom-full z-50 mb-1.5 min-w-[140px] rounded-xl p-1 text-xs text-[var(--text-main)] backdrop-blur-md',
                                 isCurrentUser ? 'right-0' : 'left-0'
                             )}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-white/10" onClick={() => { onReply?.(message); setMenuOpen(false); }}>
+                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-[var(--panel-soft)]" onClick={() => { onReply?.(message); setMenuOpen(false); }}>
                                 Reply
                             </button>
-                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-white/10" onClick={() => { onCopy?.(message); setMenuOpen(false); }}>
+                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-[var(--panel-soft)]" onClick={() => { onCopy?.(message); setMenuOpen(false); }}>
                                 Copy
                             </button>
-                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-white/10" onClick={() => { onForward?.(message); setMenuOpen(false); }}>
+                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left hover:bg-[var(--panel-soft)]" onClick={() => { onForward?.(message); setMenuOpen(false); }}>
                                 Forward
                             </button>
                             <button
                                 type="button"
-                                className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left hover:bg-white/10"
+                                className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left hover:bg-[var(--panel-soft)]"
                                 onClick={() => setReactionPickerOpen((prev) => !prev)}
                             >
                                 <SmilePlus size={12} />
                                 React
                             </button>
-                            <div className="my-0.5 h-px bg-white/10" />
-                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left text-amber-200 hover:bg-white/10" onClick={() => { onDelete?.(message, 'me'); setMenuOpen(false); }}>
+                            <div className="my-0.5 h-px bg-[var(--border-soft)]" />
+                            <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left text-amber-600 dark:text-amber-300 hover:bg-[var(--panel-soft)]" onClick={() => { onDelete?.(message, 'me'); setMenuOpen(false); }}>
                                 Delete for me
                             </button>
                             {canDeleteForEveryone ? (
-                                <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left text-rose-300 hover:bg-white/10" onClick={() => { onDelete?.(message, 'everyone'); setMenuOpen(false); }}>
+                                <button type="button" className="flex w-full rounded-lg px-3 py-1.5 text-left text-rose-600 dark:text-rose-300 hover:bg-[var(--panel-soft)]" onClick={() => { onDelete?.(message, 'everyone'); setMenuOpen(false); }}>
                                     Delete for everyone
                                 </button>
                             ) : null}
@@ -432,7 +432,7 @@ function ChatBubble({ message, isCurrentUser, avatar, query, isMatch, messageRef
                             exit={{ opacity: 0, y: 8, scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                             className={clsx(
-                                'absolute bottom-full z-50 mb-1.5 overflow-hidden rounded-2xl border border-white/15 bg-slate-900/98 p-1 shadow-2xl',
+                                'glass-panel-strong absolute bottom-full z-50 mb-1.5 overflow-hidden rounded-2xl p-1',
                                 isCurrentUser ? 'right-0' : 'left-0'
                             )}
                         >
