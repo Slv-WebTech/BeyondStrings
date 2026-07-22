@@ -54,15 +54,6 @@ export function exportChatAsText(messages, chatTitle = 'chat') {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
 /**
  * Build a minimal HTML/PDF-ready page and trigger print dialog (browser saves as PDF).
  * @param {Array} messages
