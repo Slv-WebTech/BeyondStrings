@@ -656,7 +656,7 @@ export async function createGroupChat(currentProfile, options = {}) {
     }
 
     const requestedName = String(options?.name || '').trim();
-    const secret = `grp:${ownerId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const secret = `grp:${ownerId}:${Date.now()}:${window.crypto.randomUUID()}`;
     const chatId = await getGroupChatId(secret);
     const resolvedName = requestedName || `Group ${chatId.slice(0, 8).toUpperCase()}`;
 

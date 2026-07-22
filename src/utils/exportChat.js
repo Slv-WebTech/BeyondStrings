@@ -45,17 +45,27 @@ export function exportChatAsText(messages, chatTitle = 'chat') {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /**
  * Build a minimal HTML/PDF-ready page and trigger print dialog (browser saves as PDF).
  * @param {Array} messages
  * @param {string} chatTitle
  */
 export function exportChatAsPDF(messages, chatTitle = 'chat') {
+    const safeChatTitle = escapeHtml(chatTitle);
     const rows = (messages || []).map((m) => {
-        const date = String(m.date || '').replace(/</g, '&lt;');
-        const time = String(m.time || '').replace(/</g, '&lt;');
-        const sender = String(m.sender || '').replace(/</g, '&lt;');
-        const text = String(m.message || '').replace(/</g, '&lt;');
+        const date = escapeHtml(m.date || '');
+        const time = escapeHtml(m.time || '');
+        const sender = escapeHtml(m.sender || '');
+        const text = escapeHtml(m.message || '');
         return `<tr><td style="color:#666;white-space:nowrap;padding:4px 8px;font-size:11px">${date} ${time}</td><td style="font-weight:600;padding:4px 8px;font-size:12px">${sender}</td><td style="padding:4px 8px;font-size:13px">${text}</td></tr>`;
     }).join('');
 
@@ -63,7 +73,7 @@ export function exportChatAsPDF(messages, chatTitle = 'chat') {
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>${chatTitle}</title>
+<title>${safeChatTitle}</title>
 <style>
   body{font-family:system-ui,sans-serif;color:#0f172a;padding:20px}
   h1{font-size:18px;margin-bottom:4px}
@@ -74,7 +84,7 @@ export function exportChatAsPDF(messages, chatTitle = 'chat') {
 </style>
 </head>
 <body>
-<h1>${chatTitle}</h1>
+<h1>${safeChatTitle}</h1>
 <p class="meta">Exported ${new Date().toLocaleString()} · ${(messages || []).length} messages</p>
 <table>${rows}</table>
 </body>
