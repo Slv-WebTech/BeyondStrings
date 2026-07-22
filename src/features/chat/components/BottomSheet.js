@@ -6,10 +6,10 @@ export default function BottomSheet({ open, onOpenChange, title, children, class
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
+                <Dialog.Overlay className="bottom-sheet-overlay fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
                 <Dialog.Content
                     className={cn(
-                        'chat-menu-surface fixed inset-x-0 bottom-0 z-50 max-h-[82vh] rounded-t-[1.6rem] border p-4 shadow-2xl backdrop-blur-2xl',
+                        'chat-menu-surface bottom-sheet-content fixed inset-x-0 bottom-0 z-50 max-h-[82vh] rounded-t-[1.6rem] border p-4 shadow-2xl backdrop-blur-2xl',
                         className
                     )}
                 >

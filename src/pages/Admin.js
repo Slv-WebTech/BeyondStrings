@@ -1,4 +1,5 @@
 import { ArrowLeft, Activity, Check, Copy, Eye, EyeOff, MessageSquareMore, ShieldCheck, Users, Zap, TrendingUp } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import PremiumUsernameTag from "../components/PremiumUsernameTag";
@@ -101,6 +102,7 @@ function StatCard({ label, value, icon: Icon, trend, gradient = 'from-emerald-50
 }
 
 export default function AdminPage({ navigate }) {
+  const reduceMotion = useReducedMotion();
   const profile = useSelector(selectAuthProfile);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -227,7 +229,12 @@ export default function AdminPage({ navigate }) {
     >
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="scroll-thin absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3 md:px-6 md:py-6">
-          <div className="space-y-5 pb-6 md:space-y-6">
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24 }}
+            className="space-y-5 pb-6 md:space-y-6"
+          >
             {/* Header */}
             <div className="space-y-4">
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
@@ -445,7 +452,7 @@ export default function AdminPage({ navigate }) {
                 </div>
               </section>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </Layout>

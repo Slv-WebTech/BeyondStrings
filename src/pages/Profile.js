@@ -1,4 +1,5 @@
 import { ArrowLeft, LogOut, Palette, Settings, Sparkles, UserCircle2 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Layout from './Layout';
@@ -25,6 +26,7 @@ import { cacheNotificationPreferences } from '../services/firebase/pushNotificat
 
 export default function ProfilePage({ navigate, onLogout }) {
     const dispatch = useDispatch();
+    const reduceMotion = useReducedMotion();
     const profile = useSelector(selectAuthProfile);
     const isAdmin = useSelector(selectIsAdmin);
     const themePreference = useSelector(selectThemePreference);
@@ -243,7 +245,13 @@ export default function ProfilePage({ navigate, onLogout }) {
             showAdmin={isAdmin}
             rightAction={null}
         >
-            <div className="scroll-thin min-h-0 h-full overflow-y-auto overscroll-contain p-2.5 md:p-6">
+            <motion.div
+                key={tab}
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22 }}
+                className="scroll-thin min-h-0 h-full overflow-y-auto overscroll-contain p-2.5 md:p-6"
+            >
                 {tab === 'theme' ? (
                     <SettingsPanel
                         section="theme"
@@ -324,7 +332,7 @@ export default function ProfilePage({ navigate, onLogout }) {
                         </div>
                     </div>
                 ) : null}
-            </div>
+            </motion.div>
         </Layout>
     );
 }
