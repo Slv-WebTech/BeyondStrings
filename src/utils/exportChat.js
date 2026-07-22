@@ -4,6 +4,15 @@
  */
 import { toPng } from 'html-to-image';
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /**
  * Capture a DOM node as a PNG and trigger browser download.
  * @param {HTMLElement} node
