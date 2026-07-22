@@ -67,7 +67,14 @@ export async function authenticate(req, res, { requiredRole = 'user' } = {}) {
     let claims;
     try {
         claims = await verifyFirebaseToken(idToken);
-    } catch {
+    } catch (error) {
+        if (error?.code === 'admin-not-configured') {
+            console.error('[rbac] Firebase Admin credentials are not configured for this environment.');
+            res.status(500).json({ error: 'Server authentication is not configured.' });
+            return null;
+        }
+
+        console.error('[rbac] Token verification failed:', error?.message || error);
         res.status(401).json({ error: 'Invalid or expired token.' });
         return null;
     }
