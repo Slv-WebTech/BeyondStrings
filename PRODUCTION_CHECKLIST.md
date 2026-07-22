@@ -7,6 +7,8 @@
 - Set `UPSTASH_REDIS_REST_TOKEN`
 - Set `REDIS_URL` (`rediss://default:<password>@<host>:6380`)
 - Set Firebase Admin env vars (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`)
+- Set Supabase Storage env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`) — required for encrypted media (image/video/audio/document) uploads to work; also set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_STORAGE_BUCKET` client-side
+- Confirm the CSP `connect-src` header in `vercel.json` includes `https://*.supabase.co`, or media downloads will be blocked by the browser
 - Set `HEALTHCHECK_TOKEN` for protected infra health endpoint
 - Set `PUBLIC_APP_URL` to your final production domain
 - (Optional but recommended) set `PUBLIC_GOOGLE_SITE_VERIFICATION` and `PUBLIC_BING_SITE_VERIFICATION`
@@ -41,4 +43,4 @@
 
 - Monitor queue depth and failed jobs
 - Rotate Redis and DB credentials periodically
-- Keep `firestore.rules` and `firestore.indexes.json` in deploy pipeline
+- Keep `firestore.next.rules` (the deployed ruleset per `firebase.json`) and `firestore.indexes.json` in deploy pipeline

@@ -24,7 +24,9 @@ export function getFirebaseAdminApp() {
 
     const config = getFirebaseAdminConfig();
     if (!config) {
-        throw new Error('Firebase Admin credentials are not configured.');
+        const error = new Error('Firebase Admin credentials are not configured.');
+        error.code = 'admin-not-configured';
+        throw error;
     }
 
     return initializeApp({

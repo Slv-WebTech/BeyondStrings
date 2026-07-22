@@ -91,14 +91,18 @@ import {
 } from '../firebase/socialService';
 import { persistor } from '../store/store';
 import {
+    bumpOfflineMessageRetry,
     clearOfflineMessages,
     clearOfflineMessagesByRoom,
     enqueueOfflineMessage,
     getOfflineMessagesByRoom,
     removeOfflineMessage
 } from '../utils/offlineMessageQueue';
+import { errorLogger } from '../utils/errorHandling';
 import {
     ACTIVE_ONLINE_WINDOW_MS,
+    buildReplyPreview,
+    canDeleteMessageForEveryone,
     createOfflineClientId,
     DEFAULT_CHAT_BACKGROUND,
     DEFAULT_HEADER_CONTACT_IMAGE,
@@ -128,6 +132,7 @@ import { getCachedProfiles, clearProfileCache } from '../utils/profileCache';
 const ChatInsights = lazy(() => import('../components/ChatInsights'));
 const SettingsPanel = lazy(() => import('../components/SettingsPanel'));
 const MESSAGE_TONE_URL = import.meta.env.PUBLIC_MESSAGE_TONE_URL || `${import.meta.env.BASE_URL}notification.mp3`;
+const MAX_OFFLINE_RETRIES = 5;
 
 export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTitle = '', initialChatId = '', initialChatType = '' }) {
     const VIRTUALIZE_THRESHOLD = 350;
@@ -286,7 +291,8 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
 
         try {
             return encryptMessage(safeCurrentUser, authSecret);
-        } catch {
+        } catch (error) {
+            errorLogger.logError('encryptedCurrentUserName: encryptMessage failed', error);
             return '';
         }
     }, [currentUser, authSecret]);
@@ -842,7 +848,8 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
     }, [roomId, authUid, isLoggedIn]);
 
     useEffect(() => {
-        refreshOfflineQueue(roomId, authUid).catch(() => {
+        refreshOfflineQueue(roomId, authUid).catch((error) => {
+            errorLogger.logError('refreshOfflineQueue effect failed', error);
             setPendingOutgoingMessages([]);
         });
     }, [refreshOfflineQueue, roomId, authUid]);
@@ -924,8 +931,9 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         }
 
         migratedRoomsRef.current.add(scopedRoomId);
-        scrubLegacyRoomMetadata(scopedRoomId).catch(() => {
+        scrubLegacyRoomMetadata(scopedRoomId).catch((error) => {
             // Migration is best-effort; leave chat usable if cleanup fails.
+            errorLogger.logError('scrubLegacyRoomMetadata failed', error);
         });
     }, [firebaseReady, isLoggedIn, roomId]);
 
@@ -956,8 +964,9 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                 if (syncedClientIds.length) {
                     const syncedClientIdSet = new Set(syncedClientIds);
                     setPendingOutgoingMessages((prev) => prev.filter((item) => !syncedClientIdSet.has(String(item?.clientId || '').trim())));
-                    Promise.allSettled(syncedClientIds.map((clientId) => removeOfflineMessage(clientId))).catch(() => {
+                    Promise.allSettled(syncedClientIds.map((clientId) => removeOfflineMessage(clientId))).catch((error) => {
                         // Ignore cleanup failures; queue will retry cleanup on next refresh.
+                        errorLogger.logError('offline queue post-sync cleanup failed', error);
                     });
                 }
 
@@ -1059,6 +1068,7 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         setIsFlushingOfflineQueue(true);
 
         let sentCount = 0;
+        let droppedCount = 0;
         let blockedError = null;
 
         try {
@@ -1068,13 +1078,24 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                     await removeOfflineMessage(entry.id);
                     sentCount += 1;
                 } catch (error) {
-                    blockedError = error;
-                    break;
+                    if (isRecoverableSendError(error)) {
+                        blockedError = error;
+                        break;
+                    }
+
+                    const nextRetryCount = await bumpOfflineMessageRetry(entry.id);
+                    if (nextRetryCount > MAX_OFFLINE_RETRIES) {
+                        await removeOfflineMessage(entry.id);
+                        droppedCount += 1;
+                        errorLogger.logError('flushOfflineQueue: dead-lettered message', error);
+                    }
+                    // Non-recoverable but under the retry cap: skip this entry and keep
+                    // trying the rest of the queue instead of blocking everyone behind it.
                 }
             }
         } finally {
-            await refreshOfflineQueue(roomId, authUid).catch(() => {
-                // Ignore queue refresh failures during flush finalization.
+            await refreshOfflineQueue(roomId, authUid).catch((refreshError) => {
+                errorLogger.logError('flushOfflineQueue: refreshOfflineQueue failed', refreshError);
             });
             flushingOfflineQueueRef.current = false;
             setIsFlushingOfflineQueue(false);
@@ -1084,17 +1105,18 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
             setStatusMessage(`Sent ${sentCount} queued message${sentCount === 1 ? '' : 's'}.`);
         }
 
-        if (blockedError) {
-            if (isRecoverableSendError(blockedError)) {
-                const remaining = await getOfflineMessagesByRoom(roomId).catch(() => []);
-                const remainingCount = remaining.filter((item) => String(item?.uid || '').trim() === String(authUid || '').trim()).length;
-                if (remainingCount > 0) {
-                    setStatusMessage(`${remainingCount} queued message${remainingCount === 1 ? '' : 's'} still waiting for a stable connection.`);
-                }
-                return;
-            }
+        if (droppedCount > 0) {
+            setFirebaseError(`${droppedCount} queued message${droppedCount === 1 ? '' : 's'} could not be delivered after repeated attempts and ${droppedCount === 1 ? 'was' : 'were'} dropped.`);
+        }
 
-            setFirebaseError(formatFirebaseDebugError('Unable to sync queued messages.', blockedError));
+        if (blockedError) {
+            // blockedError is only ever set for recoverable (network-type) failures;
+            // non-recoverable failures are skipped/dead-lettered per-entry above.
+            const remaining = await getOfflineMessagesByRoom(roomId).catch(() => []);
+            const remainingCount = remaining.filter((item) => String(item?.uid || '').trim() === String(authUid || '').trim()).length;
+            if (remainingCount > 0) {
+                setStatusMessage(`${remainingCount} queued message${remainingCount === 1 ? '' : 's'} still waiting for a stable connection.`);
+            }
         }
     }, [authSecret, authUid, firebaseReady, isOnline, refreshOfflineQueue, roomId]);
 
@@ -2087,8 +2109,9 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
         try {
             await clearOfflineMessages();
             await persistor.purge();
-        } catch {
+        } catch (error) {
             // Continue logout flow even if persist purge fails.
+            errorLogger.logError('logout: persistor.purge failed', error);
         }
 
         setRoomId('room1');
@@ -2340,8 +2363,9 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                     });
                     await queueMessageForLater(queuedMessage, 'Connection dropped. Message queued and will send automatically when connectivity returns.');
                     return;
-                } catch {
+                } catch (queueError) {
                     // Fall through to the send error surface if queue creation also fails.
+                    errorLogger.logError('offline queue fallback creation failed', queueError);
                 }
             }
 
@@ -2543,15 +2567,10 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
     };
 
     const handleReplyToMessage = useCallback((message) => {
-        if (!message) {
+        const replyData = buildReplyPreview(message);
+        if (!replyData) {
             return;
         }
-
-        const replyData = {
-            id: message.id || message.clientId || `reply-${Date.now()}`,
-            sender: String(message.sender || 'User').trim() || 'User',
-            message: String(message.message || '').slice(0, 120).trim() || '[message]'
-        };
 
         setReplyToMessage(replyData);
     }, []);
@@ -2844,7 +2863,7 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                 return;
             }
 
-            if (String(message.uid || '').trim() !== String(authUid || '').trim()) {
+            if (!canDeleteMessageForEveryone(message, authUid)) {
                 setFirebaseError('You can only delete your own messages for everyone.');
                 return;
             }
