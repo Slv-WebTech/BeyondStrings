@@ -54,23 +54,21 @@ async function decryptBytes(cryptoKey, data) {
 
 // ─── API helpers ─────────────────────────────────────────────────────────────
 
-async function getAuthHeader() {
+async function getAuthHeader(forceRefresh = false) {
     // Auth token is injected by the auth module — access via global if available.
     const { auth } = await import('../firebase/config');
-    const token = await auth?.currentUser?.getIdToken?.();
+    const token = await auth?.currentUser?.getIdToken?.(forceRefresh);
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function uploadEncryptedBlob({ roomId, fileName, mimeType, fileSize, encryptedBlob, onProgress }) {
-    const authHeaders = await getAuthHeader();
+function sendUploadRequest(authHeader, { roomId, fileName, mimeType, fileSize, encryptedBlob, onProgress }) {
     const params = new URLSearchParams({ roomId, fileName, mimeType, fileSize: String(fileSize) });
 
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${API_BASE}/storage/upload?${params}`);
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        const authToken = authHeaders.Authorization;
-        if (authToken) xhr.setRequestHeader('Authorization', authToken);
+        if (authHeader) xhr.setRequestHeader('Authorization', authHeader);
 
         if (typeof onProgress === 'function') {
             xhr.upload.onprogress = (e) => {
@@ -83,14 +81,32 @@ async function uploadEncryptedBlob({ roomId, fileName, mimeType, fileSize, encry
                 try { resolve(JSON.parse(xhr.responseText)); }
                 catch { reject(new Error('Invalid server response.')); }
             } else {
-                let msg = `Upload failed (${xhr.status})`;
-                try { msg = JSON.parse(xhr.responseText).error || msg; } catch { /* ignore */ }
-                reject(new Error(msg));
+                const err = new Error(`Upload failed (${xhr.status})`);
+                err.status = xhr.status;
+                try { err.message = JSON.parse(xhr.responseText).error || err.message; } catch { /* ignore */ }
+                reject(err);
             }
         };
         xhr.onerror = () => reject(new Error('Network error during upload.'));
         xhr.send(encryptedBlob);
     });
+}
+
+async function uploadEncryptedBlob(options) {
+    const authHeaders = await getAuthHeader();
+
+    try {
+        return await sendUploadRequest(authHeaders.Authorization, options);
+    } catch (error) {
+        // The cached ID token may have expired since it was last refreshed by the
+        // Firebase SDK (e.g. a long-open tab); force a refresh and retry once.
+        if (error?.status !== 401) {
+            throw error;
+        }
+
+        const refreshedHeaders = await getAuthHeader(true);
+        return sendUploadRequest(refreshedHeaders.Authorization, options);
+    }
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
