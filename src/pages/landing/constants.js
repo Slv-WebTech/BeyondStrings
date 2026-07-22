@@ -81,8 +81,7 @@ export const MODULES = [
     title: 'Live Chat Workspace',
     description: 'Real-time interaction with integrated AI assistance for every thread.',
     color: 'primary',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOqZJfVEWDej4-rTJwlcESGmiopgJW7EYvR027kUlU_Mhl6GqDNm6qH6sNu_Vitfv6FYT9e1dfPo0kuryWkot5DiKPGOcp2KwBUEh7bFXi5hqUMcPVo4ouWf2V6agOOiEfWMtuQt07UpM45rJY3P7ke3559EyiWGgZ91oz1XsE7G24p-n-bM-olB3ImRniZ14f2B4uM_vCxZwvVDROtmXbXVEHZuTd86PfXJrhJzU_v_P8nirSRaVdfdL_RDd1PAhrhxR9OzN57Ces',
-    alt: 'A sophisticated dark mode dashboard UI with sleek glassmorphism panels, featuring vibrant cyan and violet data visualizations, glowing line charts, and organized conversation threads.',
+    mockup: 'chat',
   },
   {
     id: '02',
@@ -90,8 +89,7 @@ export const MODULES = [
     title: 'AI Insights Dashboard',
     description: 'Visual data on sentiment, key topics, and emerging trends across teams.',
     color: 'secondary',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAar46SyqID6MTSEZKHx_8vzrYcYaFYD_6clgMkmixFQk8WjH56WFt9Lk9kTujNFv-hRLQpU_QNDue92eLaJ8RWJYx2MpAtHnHx-gBYrQ8umdqo70xCshPxy2bx0Al327tJyd_wf4zpb9uZe93NE3zZaXet3z-mFM-jGRKkOhm6Ur_KzZvx0Q0m2gbS2J7x1aa5tuwilpZQwYF-BT6pMmGZgiLDUjvtnprZ1dLLYkXZIcsrbL1u_iRIFD0GXy1R1NBzgG3rVqY2XmC0',
-    alt: 'An abstract visualization of complex digital networks and neural pathways glowing in cyan and soft lavender.',
+    mockup: 'insights',
   },
   {
     id: '03',
@@ -99,8 +97,7 @@ export const MODULES = [
     title: 'Replay + Context',
     description: 'Relive any conversation with AI-generated summaries and context tags.',
     color: 'primary',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOqZJfVEWDej4-rTJwlcESGmiopgJW7EYvR027kUlU_Mhl6GqDNm6qH6sNu_Vitfv6FYT9e1dfPo0kuryWkot5DiKPGOcp2KwBUEh7bFXi5hqUMcPVo4ouWf2V6agOOiEfWMtuQt07UpM45rJY3P7ke3559EyiWGgZ91oz1XsE7G24p-n-bM-olB3ImRniZ14f2B4uM_vCxZwvVDROtmXbXVEHZuTd86PfXJrhJzU_v_P8nirSRaVdfdL_RDd1PAhrhxR9OzN57Ces',
-    alt: 'A sophisticated dark mode replay interface showing conversation threads with AI-generated context tags and summaries.',
+    mockup: 'replay',
   },
 ];
 
