@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { cn } from './utils';
 import GlassCard from './GlassCard';
+import ChatWorkspaceMockup from './ChatWorkspaceMockup';
+import AIInsightsMockup from './AIInsightsMockup';
+import ReplayMockup from './ReplayMockup';
 import { MODULES } from './constants';
+
+const MOCKUP_COMPONENTS = {
+  chat: ChatWorkspaceMockup,
+  insights: AIInsightsMockup,
+  replay: ReplayMockup,
+};
 
 /**
  * ProductShowcase - Interactive tabbed product showcase
@@ -79,14 +88,15 @@ const ProductShowcase = ({ className = '' }) => {
               <div className="absolute inset-0 bg-gradient-to-br from-[#00f0ff]/8 via-transparent to-[#d0bcff]/8" />
 
               <div className={cn(
-                'relative w-full h-full transition-all duration-500',
+                'relative w-full h-full min-h-[340px] transition-all duration-500',
                 isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
               )}>
-                <img
-                  src={currentModule.image}
-                  alt={currentModule.alt}
-                  className="w-full h-full object-cover rounded-xl shadow-2xl border border-white/10"
-                />
+                {(() => {
+                  const MockupComponent = MOCKUP_COMPONENTS[currentModule.mockup];
+                  return MockupComponent ? (
+                    <MockupComponent className="h-full min-h-[340px] shadow-2xl border border-white/10" />
+                  ) : null;
+                })()}
 
                 <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md rounded-lg p-4 border border-white/10">
                   <div className="flex items-center gap-3">

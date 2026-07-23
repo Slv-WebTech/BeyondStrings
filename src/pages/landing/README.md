@@ -83,7 +83,11 @@ function CustomPage() {
 |-----------|-------------|-------------|
 | `Navbar` | Fixed nav with mobile hamburger menu | Mobile drawer, active states |
 | `HeroSection` | Main hero with animations | Scroll reveal animations |
-| `ProductShowcase` | Tabbed product modules | Tab switching with transitions |
+| `ProductShowcase` | Tabbed product modules | Tab switching with transitions; renders one of the mockup components per module |
+| `ChatWorkspaceMockup` | Static illustrative chat UI preview (fabricated placeholder conversation) | Entrance stagger on message bubbles |
+| `AIInsightsMockup` | Static illustrative analytics preview (fabricated sample metrics) | Animated topic bars |
+| `ReplayMockup` | Static illustrative replay-timeline preview (fabricated sample summary) | Animated scrubber |
+| `WallpaperGallery` | Grid of built-in chat wallpaper presets (real preset images, no user data) | Scroll-in reveal, hover zoom |
 | `Pricing` | Three-tier pricing cards | Hover effects, CTAs |
 | `Testimonials` | Horizontal scroll cards | Arrow navigation, snap scroll |
 | `ContactSection` | Contact form | Form validation, submit states |
@@ -118,7 +122,11 @@ landing-page-components/
   ├── HeroSection.js            # Hero with animations
   ├── ValueProps.js             # Three value proposition cards
   ├── ProductShowcase.js        # Tabbed product showcase
+  ├── ChatWorkspaceMockup.js    # Illustrative chat UI preview (fabricated content)
+  ├── AIInsightsMockup.js       # Illustrative analytics preview (fabricated content)
+  ├── ReplayMockup.js           # Illustrative replay-timeline preview (fabricated content)
   ├── FeaturesBento.js          # Bento grid features
+  ├── WallpaperGallery.js       # Built-in chat wallpaper preset showcase
   ├── HowItWorks.js             # Three step process
   ├── WhyBeyondStrings.js       # Feature comparison section
   ├── UseCases.js               # Use case cards

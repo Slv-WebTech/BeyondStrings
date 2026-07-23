@@ -1,4 +1,5 @@
 import { LogOut, MessageCircle, Plus, Shield, Upload, UserPlus, Users, X } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import HelpModal from "../components/HelpModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -112,6 +113,7 @@ function buildLastMessagePreview(chat) {
 
 export default function Home({ navigate, onLogout }) {
   const dispatch = useDispatch();
+  const reduceMotion = useReducedMotion();
   const authUser = useSelector(selectAuthUser);
   const profile = useSelector(selectAuthProfile);
   const isAdmin = useSelector(selectIsAdmin);
@@ -503,24 +505,36 @@ export default function Home({ navigate, onLogout }) {
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-0.5 md:pr-1">
         {mergedChats.length ? (
-          mergedChats.map((chat) => (
-            <ChatListItem
+          mergedChats.map((chat, index) => (
+            <motion.div
               key={chat.id}
-              chat={chat}
-              currentUserId={authUser?.uid}
-              isActive={chat.id === activeChatId}
-              onSelect={() => {
-                if (chat.isImported) {
-                  navigate(`/imported/${encodeURIComponent(chat.id)}`);
-                  return;
-                }
-                setActiveChatRouteId(chat.id);
-                navigate('/chat');
-              }}
-            />
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.03 }}
+              whileHover={reduceMotion ? undefined : { y: -1 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+            >
+              <ChatListItem
+                chat={chat}
+                currentUserId={authUser?.uid}
+                isActive={chat.id === activeChatId}
+                onSelect={() => {
+                  if (chat.isImported) {
+                    navigate(`/imported/${encodeURIComponent(chat.id)}`);
+                    return;
+                  }
+                  setActiveChatRouteId(chat.id);
+                  navigate('/chat');
+                }}
+              />
+            </motion.div>
           ))
         ) : (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--panel-soft)] px-4 py-10 text-center">
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24 }}
+            className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--panel-soft)] px-4 py-10 text-center">
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)]">
               <MessageCircle size={26} className="text-[var(--accent)]" />
             </span>
@@ -533,7 +547,7 @@ export default function Home({ navigate, onLogout }) {
                 Import chat
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

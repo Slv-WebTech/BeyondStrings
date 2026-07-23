@@ -48,11 +48,13 @@ This manifest reflects the current documentation and architecture after the App 
 
 ### Components
 
-- `src/components/ChatBubble.js` — Message bubble: reply block, emoji reactions (👍 ❤️ 😂 🔥), action menu, delivery status. Mobile-first widths (`max-w-[100vw]`).
+- `src/components/ChatBubble.js` — Message bubble: reply block, emoji reactions (👍 ❤️ 😂 🔥), action menu, delivery status. Mobile-first widths (`max-w-[100vw]`). Context-menu popovers use theme tokens (`glass-panel-strong`) rather than hardcoded colors.
 - `src/components/ChatHeader.js` — Sticky header: sync health chip (Offline/Syncing/Degraded/Live), clickable group title for settings.
-- `src/components/GroupSettingsPanel.js` — Group settings modal: edit name/description/photo, member list (role-sorted), remove member, leave group, delete group.
-- `src/components/ChatListItem.js` — Sidebar item with unread count from `memberMeta[uid].unreadCount`.
+- `src/components/GroupSettingsPanel.js` — Group settings modal: edit name/description/photo, member list (role-sorted), remove member, leave group, delete group. Inner surfaces use theme tokens for light/dark parity.
+- `src/components/ChatListItem.js` — Sidebar item with unread count from `memberMeta[uid].unreadCount`. Theme-aware surface (was previously a fixed dark treatment); stagger-in and hover/tap motion applied where rendered in `Home.js`.
 - `src/components/AISidePanel.js` — AI summary, assistant, search, reply suggestions panel.
+- `src/components/LiveComposer.js` — Message input bar: quick AI commands, attach/emoji sheets, voice input, connection/encryption status pills. Rebuilt on theme tokens (`.theme-pill`, `--panel`/`--input-bg`) instead of fixed dark colors.
+- `src/components/BottomSheet.js` — Shared Radix-based bottom sheet (emoji picker, AI panel sheets); animates open/close via Radix `data-state` CSS hooks.
 - `src/components/ReactionBar.js` — Per-message reaction display.
 - `src/components/AuthForms.js` — Sign-in / sign-up forms.
 - `src/components/SearchBar.js` — In-chat message search.
@@ -60,10 +62,18 @@ This manifest reflects the current documentation and architecture after the App 
 
 ### Pages
 
-- `src/pages/Home.js` — Chat discovery: start direct chat, create group, join by group ID (with approval flow).
-- `src/pages/Admin.js` — Admin dashboard: scrollable group table (single-row layout), user list.
-- `src/pages/Profile.js` — User avatar, username, preferences.
+- `src/pages/Home.js` — Chat discovery: start direct chat, create group, join by group ID (with approval flow). Chat list stagger-in/hover motion; conversation list built from `ChatListItem`.
+- `src/pages/Admin.js` — Admin dashboard: scrollable group table (single-row layout), user list. Fades in on mount.
+- `src/pages/Profile.js` — User avatar, username, preferences. Tab content cross-fades on switch.
 - `src/pages/ImportedChat.js` — Imported chat archive viewer.
+
+### Landing Page (`src/pages/landing/`)
+
+- `BeyondStringsLanding.js` — Composes the full marketing page (Navbar, Hero, sections, Footer).
+- `ProductShowcase.js` — Tabbed showcase of the three core modules; renders `ChatWorkspaceMockup` / `AIInsightsMockup` / `ReplayMockup` per module instead of static stock imagery.
+- `ChatWorkspaceMockup.js`, `AIInsightsMockup.js`, `ReplayMockup.js` — Static illustrative previews built from fabricated placeholder content (no real user data), matching the in-app visual language.
+- `WallpaperGallery.js` — Showcases a curated set of the built-in chat wallpaper presets from `src/utils/chatBackgrounds.js`.
+- `GlassCard.js`, `SectionHeading.js`, `GradientText.js`, `AmbientGlow.js` — Shared landing-page visual primitives (own `#00f0ff`/`#d0bcff` accent palette, separate from the app's chat theme tokens).
 
 ### State
 
@@ -99,7 +109,12 @@ This manifest reflects the current documentation and architecture after the App 
 
 ### Security Rules
 
-- `firestore.rules` — Firestore security rules. Legacy group support (no `joinPolicy`), rejoin flow, join request re-submit, system messages.
+- `firestore.next.rules` — Firestore security rules (the deployed ruleset per `firebase.json`). Legacy group support (no `joinPolicy`), rejoin flow, join request re-submit, system messages.
+
+### Theming
+
+- `tailwind.config.js` — `darkMode` tracks the app's own `[data-theme="dark"]` attribute (not OS `prefers-color-scheme`), so Tailwind `dark:` variants stay in sync with the in-app theme toggle.
+- `src/index.css` — CSS custom properties for light/dark (`--panel`, `--border-soft`, `--text-main`, `--accent`, bubble tokens, etc.) plus a secondary `[data-chat-mode]` retint layer (casual/romantic/professional/formal) and shared glass/premium utility classes (`.glass-panel`, `.premium-panel-strong`, `.theme-pill`).
 
 ## Build and Bundling
 

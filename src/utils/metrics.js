@@ -33,7 +33,7 @@ function getOrCreateSessionId() {
     try {
         let sid = sessionStorage.getItem(SESSION_KEY);
         if (!sid) {
-            sid = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            sid = `sess_${window.crypto.randomUUID()}`;
             sessionStorage.setItem(SESSION_KEY, sid);
         }
         return sid;

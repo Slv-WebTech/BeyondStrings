@@ -110,7 +110,7 @@ export default function GroupSettingsPanel({
                 <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-[2rem] bg-gradient-to-r from-emerald-500/80 via-sky-400/80 to-violet-500/80" />
 
                 {/* Header */}
-                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--border-soft)] px-5 py-4">
                     <div className="flex items-center gap-3">
                         {group?.photoUrl ? (
                             <img src={group.photoUrl} alt={name} className="h-10 w-10 rounded-full border border-white/20 object-cover shadow" />
@@ -136,7 +136,7 @@ export default function GroupSettingsPanel({
                     <div className="grid gap-0 md:grid-cols-2">
 
                         {/* Left — Group Details */}
-                        <div className="space-y-4 border-b border-white/10 p-5 md:border-b-0 md:border-r">
+                        <div className="space-y-4 border-b border-[var(--border-soft)] p-5 md:border-b-0 md:border-r">
                             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                                 <Sparkles size={11} />
                                 Group Details
@@ -179,7 +179,7 @@ export default function GroupSettingsPanel({
                                 />
                             </label>
 
-                            <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                            <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--panel-soft)] px-3 py-2.5">
                                 <span>
                                     <span className="block text-xs font-medium text-[var(--text-main)]">Require Approval To Join</span>
                                     <span className="block text-[11px] text-[var(--text-muted)]">Only approved users can become members and view messages.</span>
@@ -189,7 +189,7 @@ export default function GroupSettingsPanel({
                                     checked={approvalRequired}
                                     onChange={(e) => setApprovalRequired(Boolean(e.target.checked))}
                                     disabled={!canManage}
-                                    className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-400 disabled:opacity-50"
+                                    className="h-4 w-4 rounded border-[var(--border-soft)] bg-transparent accent-emerald-400 disabled:opacity-50"
                                 />
                             </label>
 
@@ -200,7 +200,7 @@ export default function GroupSettingsPanel({
                                         <Link2 size={11} />
                                         Invite Link
                                     </p>
-                                    <code className="block truncate rounded bg-black/20 px-2 py-1 text-[11px] text-[var(--text-muted)]">
+                                    <code className="block truncate rounded bg-[var(--panel-soft)] px-2 py-1 text-[11px] text-[var(--text-muted)]">
                                         {`${window.location.origin}/?join=${groupId}`}
                                     </code>
                                     <button
@@ -233,7 +233,7 @@ export default function GroupSettingsPanel({
                                     return (
                                         <div
                                             key={memberId || toMemberName(member)}
-                                            className="flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/4 px-3 py-2 transition hover:bg-white/7"
+                                            className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border-soft)] bg-[var(--panel-soft)] px-3 py-2 transition hover:bg-[var(--panel)]"
                                         >
                                             <div className="flex min-w-0 items-center gap-2.5">
                                                 <MemberAvatar name={toMemberName(member)} />
@@ -266,14 +266,14 @@ export default function GroupSettingsPanel({
                                         </div>
                                     );
                                 }) : (
-                                    <p className="rounded-xl border border-white/8 bg-white/4 px-3 py-4 text-center text-sm text-[var(--text-muted)]">No members found.</p>
+                                    <p className="rounded-xl border border-[var(--border-soft)] bg-[var(--panel-soft)] px-3 py-4 text-center text-sm text-[var(--text-muted)]">No members found.</p>
                                 )}
                             </div>
                         </div>
                     </div>
 
                     {/* Footer actions */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-5 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-soft)] px-5 py-4">
                         <div className="flex flex-wrap gap-2">
                             {canManage ? (
                                 <Button type="button" onClick={handleSave} disabled={saving}>

@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { exportChatAsText, exportChatAsPDF } from '../utils/exportChat';
 import { trackEvent } from '../utils/metrics';
 import { Card, CardContent } from '../components/ui/card';
+import { Skeleton } from '../components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../components/ui/sheet';
 import {
     addMessageReaction,
@@ -3394,7 +3395,12 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                                     ) : null}
 
                                     {showSearch ? (
-                                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                                        <motion.div
+                                            initial={shouldReduceMotion ? false : { opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.18 }}
+                                            className="mb-2 flex flex-wrap items-center gap-1.5"
+                                        >
                                             {[
                                                 { id: 'all', label: 'All' },
                                                 { id: 'media', label: 'Media' },
@@ -3405,15 +3411,12 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                                                     key={item.id}
                                                     type="button"
                                                     onClick={() => setSearchFilter(item.id)}
-                                                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${searchFilter === item.id
-                                                        ? 'border-cyan-200/60 bg-cyan-300/20 text-cyan-50'
-                                                        : 'border-white/20 bg-black/20 text-slate-200'
-                                                        }`}
+                                                    className={`theme-pill !py-1 !text-[11px] transition-colors ${searchFilter === item.id ? 'theme-pill-active' : ''}`}
                                                 >
                                                     {item.label}
                                                 </button>
                                             ))}
-                                        </div>
+                                        </motion.div>
                                     ) : null}
 
                                     {showInsights ? (
@@ -3431,8 +3434,13 @@ export function useLegacyChatRuntime({ onBackHome, onOpenSidebar, initialChatTit
                                             </Button>
                                             <Suspense
                                                 fallback={(
-                                                    <div className="glass-panel rounded-[1.2rem] p-6 text-sm text-[var(--text-muted)]">
-                                                        Loading analysis...
+                                                    <div className="glass-panel space-y-3 rounded-[1.2rem] p-6">
+                                                        <Skeleton className="h-5 w-40" />
+                                                        <Skeleton className="h-24 w-full" />
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <Skeleton className="h-16" />
+                                                            <Skeleton className="h-16" />
+                                                        </div>
                                                     </div>
                                                 )}
                                             >

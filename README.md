@@ -214,4 +214,20 @@ GET /api/health/infra?token=<HEALTHCHECK_TOKEN>
       <sub><a href="screenshots/admin-dashboard.png">PNG</a> | <a href="screenshots/admin-dashboard.svg">SVG</a></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="screenshots/user-profile.png" alt="User profile" width="220" />
+      <br/>
+      <sub><b>User Profile</b></sub>
+      <br/>
+      <sub><a href="screenshots/user-profile.png">PNG</a> | <a href="screenshots/user-profile.svg">SVG</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="screenshots/helping%20Guide.png" alt="Help guide" width="220" />
+      <br/>
+      <sub><b>Help Guide</b></sub>
+      <br/>
+      <sub><a href="screenshots/helping%20Guide.png">PNG</a> | <a href="screenshots/helping%20Guide.svg">SVG</a></sub>
+    </td>
+  </tr>
 </table>

@@ -6,6 +6,7 @@ import HeroSection from './HeroSection';
 import ValueProps from './ValueProps';
 import ProductShowcase from './ProductShowcase';
 import FeaturesBento from './FeaturesBento';
+import WallpaperGallery from './WallpaperGallery';
 import HowItWorks from './HowItWorks';
 import WhyBeyondStrings from './WhyBeyondStrings';
 import UseCases from './UseCases';
@@ -243,6 +244,7 @@ const BeyondStringsLanding = ({ onSignIn, onSignUp, onSelectAction, themeMode = 
         </div>
 
         <FeaturesBento />
+        <WallpaperGallery />
         <HowItWorks />
         <WhyBeyondStrings />
         <UseCases />
